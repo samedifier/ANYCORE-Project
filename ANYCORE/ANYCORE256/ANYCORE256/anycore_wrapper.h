@@ -22,18 +22,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#ifdef _WIN32
-    #include <windows.h>
-    #define ANYCORE_DLOPEN(path)          (void*)LoadLibraryA(path)
-    #define ANYCORE_DLSYM(h, name, field) *(void**)(&(field)) = (void*)GetProcAddress((HMODULE)(h), (name))
-    #define ANYCORE_DLCLOSE(h)            FreeLibrary((HMODULE)(h))
-#else
-    #include <dlfcn.h>
-    #define ANYCORE_DLOPEN(path)          dlopen((path), RTLD_NOW)
-    #define ANYCORE_DLSYM(h, name, field) *(void**)(&(field)) = dlsym((h), (name))
-    #define ANYCORE_DLCLOSE(h)            dlclose(h)
-#endif
-
+#include <dlfcn.h>
+#define ANYCORE_DLOPEN(path)          dlopen((path), RTLD_NOW)
+#define ANYCORE_DLSYM(h, name, field) *(void**)(&(field)) = dlsym((h), (name))
+#define ANYCORE_DLCLOSE(handle)       dlclose(handle)
+    
 #if PRESICION_ == PRESICION_FLOAT
     #define VEC2DTYPE Vec2f
     #define VEC3DTYPE Vec3f

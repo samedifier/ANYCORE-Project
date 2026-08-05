@@ -10,7 +10,7 @@ CORE_OUT="./build/anycore256.so"
 
 CC=gcc
 
-mkdir build;
+rm -rf build; mkdir build;
 
 $CC -shared -fPIC \
     $CORE_SRC/anycore.c \

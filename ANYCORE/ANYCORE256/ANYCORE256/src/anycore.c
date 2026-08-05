@@ -23,6 +23,8 @@
 #include "anycore_vertex_manager_utils.h"
 #include "anycore_app_manager_utils.h"
 
+#include <string.h>
+
 ANYCORE_EXPORT ANYCORE_RESULT initANYCORE(ANYCORE** outanycore,
     uint32_t chunkCountLimit, uint32_t modelChunkCountLimit, uint32_t startCapacity,
     uint32_t loopCapacity, uint32_t moduleCapacity, uint32_t stride) {
@@ -32,7 +34,7 @@ ANYCORE_EXPORT ANYCORE_RESULT initANYCORE(ANYCORE** outanycore,
     ANYCORE* core = (ANYCORE*)ANYCORE_mmap(prec1);
     if (core == ANYCORE_MAP_FAILED) { return ANYCORE_ERR_ALLOC_FAILED; }
         
-    ANYCORE_memset(core, 0, sizeof(ANYCORE));
+    memset(core, 0, sizeof(ANYCORE));
 
     if (chunkCountLimit == 0)          { chunkCountLimit = 1;          }
     if (chunkCountLimit >= CHUNKLIMIT) { chunkCountLimit = CHUNKLIMIT; }

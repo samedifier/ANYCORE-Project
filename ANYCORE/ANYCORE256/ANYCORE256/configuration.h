@@ -97,34 +97,7 @@
     #define PRESICION double
 #endif
 
-#ifdef _WIN32
-    #define ANYCORE_EXPORT __declspec(dllexport)
-#else
-    #define ANYCORE_EXPORT __attribute__((visibility("default")))
-#endif
-
-static inline void ANYCORE_memcpy(void* dst, const void* src, size_t n) {
-    uint64_t* d64 = dst;
-    const uint64_t* s64 = src;
-    size_t n64 = n >> 3;
-    while (n64--) { *d64++ = *s64++; }
-
-    uint8_t* d8 = (uint8_t*)d64;
-    const uint8_t* s8 = (const uint8_t*)s64;
-    size_t n8 = n & 7;
-    while (n8--) { *d8++ = *s8++; }
-}
-
-static inline void ANYCORE_memset(void* dst, uint8_t val, size_t n) {
-    uint64_t* d64 = dst;
-    uint64_t v64 = val * 0x0101010101010101ULL;
-    size_t n64 = n >> 3;
-    while (n64--) { *d64++ = v64; }
-
-    uint8_t* d8 = (uint8_t*)d64;
-    size_t n8 = n & 7;
-    while (n8--) { *d8++ = val; }
-}
+#define ANYCORE_EXPORT __attribute__((visibility("default")))
 
 static inline void ANYCORE_memset32(uint32_t* dst, size_t count) {
     while (count--) { *dst++ = 0; }

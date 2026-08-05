@@ -14,6 +14,7 @@
  */
 
 #include "anycore_vertex_manager_utils.h"
+#include <string.h>
 
 #if ANYCORE_ENABLE_ADD_MODEL
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_addModel(ANYCORE* anycore, void* vertices, const uint32_t vertexCount, uint32_t* indices, const uint32_t indexCount, ModelID* outModelID) {
@@ -106,9 +107,9 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_updateModel(ANYCORE* anycore
     m->vertexCount = newVertexCount;
     m->indexCount  = newIndexCount;
 
-    ANYCORE_memcpy(m->vertices, newVertices, newVertexCount * vm->stride);
+    memcpy(m->vertices, newVertices, newVertexCount * vm->stride);
     if (newIndices && m->indices) {
-        ANYCORE_memcpy(m->indices, newIndices, newIndexCount * sizeof(uint32_t));
+        memcpy(m->indices, newIndices, newIndexCount * sizeof(uint32_t));
     }
 
     uint32_t mask  = 1u << (slot & 31);

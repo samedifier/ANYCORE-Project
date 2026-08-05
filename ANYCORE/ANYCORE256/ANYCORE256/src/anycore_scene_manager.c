@@ -46,97 +46,161 @@ ANYCORE_EXPORT bool ANYCORE_isEntityLocked(ANYCORE* anycore, const EntityID enti
 
 #if ANYCORE_ENABLE_ALLOC_NEW_CHUNK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
+    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
     if (sm->chunkcount >= sm->chunkCountLimit) { return ANYCORE_ERR_CHUNK_LIMIT; }
 
-    uint32_t i = sm->chunkcount;
-    ANYCORE_SceneChunk* sc = &sm->sceneChunks[i];
+    const uint32_t chunk = sm->chunkcount;
 
-    uint32_t prec1 = CHUNKSIZE * sizeof(uint16_t);
-    uint32_t prec2 = 0X800     * sizeof(uint32_t);
+    const uint32_t prec1 = CHUNKSIZE * sizeof(uint16_t);
+    const uint32_t prec2 = 0x800 * sizeof(uint32_t);
 
     uint16_t* gen = ANYCORE_mmap(prec1);
     uint16_t* fs  = ANYCORE_mmap(prec1);
     uint32_t* vf  = ANYCORE_mmap(prec2);
     uint32_t* lf  = ANYCORE_mmap(prec2);
 
-    if (gen == ANYCORE_MAP_FAILED || fs == ANYCORE_MAP_FAILED || vf == ANYCORE_MAP_FAILED || lf == ANYCORE_MAP_FAILED) {
+    if (gen == ANYCORE_MAP_FAILED || fs  == ANYCORE_MAP_FAILED || vf  == ANYCORE_MAP_FAILED || lf  == ANYCORE_MAP_FAILED) {
+
         if (gen != ANYCORE_MAP_FAILED) { ANYCORE_munmap(gen, prec1); }
-        if (fs  != ANYCORE_MAP_FAILED) { ANYCORE_munmap(fs,  prec1); }
-        if (vf  != ANYCORE_MAP_FAILED) { ANYCORE_munmap(vf,  prec2); }
-        if (lf  != ANYCORE_MAP_FAILED) { ANYCORE_munmap(lf,  prec2); }
+        if (fs != ANYCORE_MAP_FAILED)  { ANYCORE_munmap(fs,  prec1); }
+        if (vf != ANYCORE_MAP_FAILED)  { ANYCORE_munmap(vf,  prec2); }
+        if (lf != ANYCORE_MAP_FAILED)  { ANYCORE_munmap(lf,  prec2); }
+
         return ANYCORE_ERR_ALLOC_FAILED;
     }
 
-    for (uint32_t j = 0; j < CHUNKSIZE; ++j) { fs[j] = (uint16_t)j; }
+    for (uint32_t j = 0; j < CHUNKSIZE; ++j) { fs[j]  = (uint16_t)j; gen[j] = 0; }
 
-    ANYCORE_RESULT vmresult = VertexManager_onGrow(anycore, i);
-    ANYCORE_RESULT tmresult = TransformManager_onGrow(anycore, i);
+    ANYCORE_RESULT vmresult = VertexManager_onGrow(anycore, chunk);
+    ANYCORE_RESULT tmresult = TransformManager_onGrow(anycore, chunk);
 
     if (tmresult != ANYCORE_SUCCESS || vmresult != ANYCORE_SUCCESS) {
         ANYCORE_munmap(gen, prec1);
         ANYCORE_munmap(fs,  prec1);
         ANYCORE_munmap(vf,  prec2);
         ANYCORE_munmap(lf,  prec2);
+
         return ANYCORE_ERR_ALLOC_FAILED;
     }
+
+    ANYCORE_SceneChunk* sc = &sm->sceneChunks[chunk];
 
     sc->generations = gen;
     sc->freeSlots   = fs;
     sc->validFlags  = vf;
     sc->lockFlags   = lf;
 
-    sm->fssize[i] = CHUNKSIZE;
-    sm->usablefsc[sm->ufscsize++] = i;
-    sm->isusable[i] = 1;
+    sm->fssize[chunk]   = CHUNKSIZE;
+    sm->isusable[chunk] = 1;
+
+    sm->usablefsc[sm->ufscsize++] = chunk;
 
     sm->chunkcount++;
+
     return ANYCORE_SUCCESS;
 }
 #endif
 
 #if ANYCORE_ENABLE_FREE_LAST_CHUNK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
+    if (!anycore) {
+        return ANYCORE_ERR_INVALID_ANYCORE;
+    }
+
     ANYCORE_SceneManager*     sm  = &anycore->sceneManager;
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
     ANYCORE_VertexManager*    vm  = &anycore->vertexManager;
 
-    uint32_t prec1 = CHUNKSIZE * sizeof(PRESICION);
-    uint32_t prec2 = CHUNKSIZE * sizeof(uint16_t);
-    uint32_t prec3 = 0X800     * sizeof(uint32_t);
-
     if (sm->chunkcount == 0) { return ANYCORE_ERR_NO_CHUNK; }
-    uint32_t last = sm->chunkcount - 1;
 
-    ANYCORE_SceneChunk* sc = sm->sceneChunks;
-    ANYCORE_DirtyChunk* dc = ttm->dirtyChunks;
+    const uint32_t last = sm->chunkcount - 1;
+    const uint32_t activeCount = CHUNKSIZE - sm->fssize[last];
+
+    sm->dsize -= activeCount;
+
+    if (sm->isusable[last]) {
+        for (uint32_t i = 0; i < sm->ufscsize; ++i) {
+            if (sm->usablefsc[i] == last) {
+                sm->usablefsc[i] = sm->usablefsc[sm->ufscsize - 1];
+                sm->ufscsize--;
+                break;
+            }
+        }
+        sm->isusable[last] = 0;
+    }
+
+    const uint32_t prec1 = CHUNKSIZE * sizeof(PRESICION);
+    const uint32_t prec2 = CHUNKSIZE * sizeof(uint16_t);
+    const uint32_t prec3 = 0x800 * sizeof(uint32_t);
+
+    ANYCORE_SceneChunk* sc = &sm->sceneChunks[last];
+    ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[last];
+
 #if SPACE == SPACE_2D
-    TC2DTYPE* tc = ttm->transformChunks;
+    TC2DTYPE* tc = &ttm->transformChunks[last];
 #elif SPACE == SPACE_3D
-    TC3DTYPE* tc = ttm->transformChunks;
+    TC3DTYPE* tc = &ttm->transformChunks[last];
 #endif
 
-    ANYCORE_munmap(sc[last].generations, prec2);
-    ANYCORE_munmap(sc[last].freeSlots,   prec2);
-    ANYCORE_munmap(sc[last].validFlags,  prec3);
-    ANYCORE_munmap(sc[last].lockFlags,   prec3);
+    ANYCORE_munmap(sc->generations, prec2);
+    ANYCORE_munmap(sc->freeSlots,   prec2);
+    ANYCORE_munmap(sc->validFlags,  prec3);
+    ANYCORE_munmap(sc->lockFlags,   prec3);
 
 #if SPACE == SPACE_2D
-    ANYCORE_munmap(tc[last].posx, prec1); ANYCORE_munmap(tc[last].posy, prec1);
-    ANYCORE_munmap(tc[last].scax, prec1); ANYCORE_munmap(tc[last].scay, prec1);
-    ANYCORE_munmap(tc[last].rotz, prec1);
+    ANYCORE_munmap(tc->posx, prec1);
+    ANYCORE_munmap(tc->posy, prec1);
+    ANYCORE_munmap(tc->scax, prec1);
+    ANYCORE_munmap(tc->scay, prec1);
+    ANYCORE_munmap(tc->rotz, prec1);
 #elif SPACE == SPACE_3D
-    ANYCORE_munmap(tc[last].posx, prec1); ANYCORE_munmap(tc[last].posy, prec1); ANYCORE_munmap(tc[last].posz, prec1);
-    ANYCORE_munmap(tc[last].rotx, prec1); ANYCORE_munmap(tc[last].roty, prec1); ANYCORE_munmap(tc[last].rotz, prec1);
-    ANYCORE_munmap(tc[last].scax, prec1); ANYCORE_munmap(tc[last].scay, prec1); ANYCORE_munmap(tc[last].scaz, prec1);
+    ANYCORE_munmap(tc->posx, prec1);
+    ANYCORE_munmap(tc->posy, prec1);
+    ANYCORE_munmap(tc->posz, prec1);
+
+    ANYCORE_munmap(tc->rotx, prec1);
+    ANYCORE_munmap(tc->roty, prec1);
+    ANYCORE_munmap(tc->rotz, prec1);
+
+    ANYCORE_munmap(tc->scax, prec1);
+    ANYCORE_munmap(tc->scay, prec1);
+    ANYCORE_munmap(tc->scaz, prec1);
 #endif
-    ANYCORE_munmap(dc[last].dirties,   CHUNKSIZE * sizeof(uint32_t));
-    ANYCORE_munmap(dc[last].dirtyList, CHUNKSIZE * sizeof(uint16_t));
+
+    ANYCORE_munmap(dc->dirties, CHUNKSIZE * sizeof(uint32_t));
+    ANYCORE_munmap(dc->dirtyList, CHUNKSIZE * sizeof(uint16_t));
 
     ANYCORE_munmap(vm->instanceChunks[last].instances, CHUNKSIZE * sizeof(uint32_t));
 
-    sm->chunkcount = last;
-    
+    sc->generations = NULL;
+    sc->freeSlots   = NULL;
+    sc->validFlags  = NULL;
+    sc->lockFlags   = NULL;
+
+    tc->posx = NULL;
+    tc->posy = NULL;
+#if SPACE == SPACE_3D
+    tc->posz = NULL;
+    tc->rotx = NULL;
+    tc->roty = NULL;
+#endif
+    tc->rotz = NULL;
+    tc->scax = NULL;
+    tc->scay = NULL;
+#if SPACE == SPACE_3D
+    tc->scaz = NULL;
+#endif
+
+    dc->dirties   = NULL;
+    dc->dirtyList = NULL;
+
+    vm->instanceChunks[last].instances = NULL;
+
+    sm->fssize[last] = 0;
+    sm->chunkcount--;
+
     return ANYCORE_SUCCESS;
 }
 #endif
@@ -582,10 +646,11 @@ ANYCORE_EXPORT uint32_t ANYCORE_destroyAllEntities(ANYCORE* anycore) {
     for (uint32_t c = 0; c < sm->chunkcount; c++) {
         ANYCORE_SceneChunk* restrict sc = &sm->sceneChunks[c];
         uint32_t words = (CHUNKMASK >> 5) + 1;
+        uint32_t chunk_modified = 0;
 
         for (uint32_t w = 0; w < words; w++) {
             uint32_t todelete = sc->validFlags[w] & ~sc->lockFlags[w];
-            if (todelete == 0) { goto skip; }
+            if (todelete == 0) { continue; }
 
             for (uint32_t bit = 0; bit < 32; bit++) {
                 uint32_t mask = 1u << bit;
@@ -597,15 +662,14 @@ ANYCORE_EXPORT uint32_t ANYCORE_destroyAllEntities(ANYCORE* anycore) {
                     
                     markDirty(ttm, dc, ttm->dcsflags, c, slot, w, mask);
                     totaldestroyed++;
+                    chunk_modified = 1;
                 }
             }
+        }
 
-            if (sm->isusable[c] != 1) {
-                sm->usablefsc[sm->ufscsize++] = c;
-                sm->isusable[c] = 1;
-            }
-
-            skip:
+        if (chunk_modified && sm->isusable[c] != 1) {
+            sm->usablefsc[sm->ufscsize++] = c;
+            sm->isusable[c] = 1;
         }
     }
     sm->dsize -= totaldestroyed;

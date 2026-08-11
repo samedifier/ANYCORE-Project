@@ -70,7 +70,7 @@ typedef struct {
     ANYCORE_RESULT (*pushStart)       (ANYCORE* anycore, void (*startFn)(ANYCORE*));
 
     /* Registers a function to be executed during the ANYCORE loop. */
-    ANYCORE_RESULT (*pushLoop)        (ANYCORE* anycore, void (*loopFn)(ANYCORE*));
+    ANYCORE_RESULT (*pushLoop)        (ANYCORE* anycore, void (*loopFn)(ANYCORE*, double));
 
     /* Starts the ANYCORE execution loop. */
     void           (*run)             (ANYCORE* anycore);

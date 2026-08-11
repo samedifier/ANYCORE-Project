@@ -150,7 +150,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_loadModule(ANYCORE* anycore, const char* p
 
     pthread_create(&m->thread, NULL, ANYCORE_moduleWorker, m);
 
-    *outLibHandle = m->libHandle;
+    if (outLibHandle) { *outLibHandle = m->libHandle; }
 
     am->moduleCount++;
     return ANYCORE_SUCCESS;
@@ -188,7 +188,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushStart(ANYCORE* anycore, void (*startFn
     return ANYCORE_SUCCESS;
 }
 
-ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushLoop(ANYCORE* anycore, void (*loopFn)(void*, const double)) {
+ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushLoop(ANYCORE* anycore, void (*loopFn)(void*, double)) {
     if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_AppManager* am = &anycore->appManager;
     if (am->loopCount >= am->loopCapacity) { return ANYCORE_ERR_CAPACITY_REACHED; }
@@ -217,7 +217,7 @@ ANYCORE_EXPORT void ANYCORE_run(ANYCORE* anycore) {
     while (am->isAppRunning) {
         double dt = am->stream.deltaTime;
         for (uint32_t i = 0; i < am->loopCount; i++) {
-            if (am->Loops[i]) { ((void (*)(ANYCORE*, const double))am->Loops[i])(anycore, dt); }
+            if (am->Loops[i]) { ((void (*)(ANYCORE*, double))am->Loops[i])(anycore, dt); }
         }
 
         VertexManager_UpdateExportStream(anycore, &am->stream);

@@ -23,7 +23,7 @@
 
 typedef struct {
     void (**Starts)(void*);
-    void (**Loops)(void*, const double);
+    void (**Loops)(void*, double);
     uint32_t startCount; uint32_t startCapacity;
     uint32_t loopCount;  uint32_t loopCapacity;
 

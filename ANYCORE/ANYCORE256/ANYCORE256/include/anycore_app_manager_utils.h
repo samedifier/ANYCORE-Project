@@ -38,7 +38,7 @@ ANYCORE_EXPORT int ANYCORE_unloadBehaviour(void* libHandle);
 #endif
 
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushStart(ANYCORE* anycore, void (*startFn)(void*));
-ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushLoop(ANYCORE* anycore, void (*loopFn)(void*, const double));
+ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushLoop(ANYCORE* anycore, void (*loopFn)(void*, double));
 
 #if ANYCORE_ENABLE_KILL_MODULE
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_killModule(ANYCORE* anycore, uint32_t index);

@@ -61,7 +61,10 @@ ANYCORE_EXPORT ANYCORE_RESULT initANYCORE(ANYCORE** outanycore,
 }
 
 void freeANYCORE(ANYCORE* anycore) {
-    freeScene(anycore); TransformManager_onFree(anycore); VertexManager_onFree(anycore); ANYCORE_munmap(anycore, sizeof(ANYCORE));
+    freeScene(anycore);
+    TransformManager_onFree(anycore);
+    VertexManager_onFree(anycore);
+    ANYCORE_munmap(anycore, sizeof(ANYCORE));
 }
 
 ANYCORE_EXPORT uint32_t getANYCOREBuildID(ANYCORE* anycore) { return ANYCORE_BUILD_ID; }

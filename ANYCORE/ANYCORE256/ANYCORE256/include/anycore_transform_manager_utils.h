@@ -22,27 +22,27 @@
 #if PRESICION_ == PRESICION_FLOAT
     #define VEC2DTYPE Vec2f
     #define VEC3DTYPE Vec3f
-    #define TC2DTYPE  ANYCORE_TransformChunk2Df
-    #define TC3DTYPE  ANYCORE_TransformChunk3Df
+    #define TC2DTYPE  ANYCORE_Transform2Df
+    #define TC3DTYPE  ANYCORE_Transform3Df
 #elif PRESICION_ == PRESICION_DOUBLE
     #define VEC2DTYPE Vec2d
     #define VEC3DTYPE Vec3d
-    #define TC2DTYPE  ANYCORE_TransformChunk2Dd
-    #define TC3DTYPE  ANYCORE_TransformChunk3Dd
+    #define TC2DTYPE  ANYCORE_Transform2Dd
+    #define TC3DTYPE  ANYCORE_Transform3Dd
 #endif
 
 static inline ANYCORE_RESULT TransformManager_onInit(ANYCORE* anycore, uint32_t ccl) {
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        uint32_t prec1 = ccl * sizeof(ANYCORE_TransformChunk2Df);
+        uint32_t prec1 = ccl * sizeof(ANYCORE_Transform2Df*);
     #elif PRESICION_ == PRESICION_DOUBLE
-        uint32_t prec1 = ccl * sizeof(ANYCORE_TransformChunk2Dd);
+        uint32_t prec1 = ccl * sizeof(ANYCORE_Transform2Dd*);
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        uint32_t prec1 = ccl * sizeof(ANYCORE_TransformChunk3Df);
+        uint32_t prec1 = ccl * sizeof(ANYCORE_Transform3Df*);
     #elif PRESICION_ == PRESICION_DOUBLE
-        uint32_t prec1 = ccl * sizeof(ANYCORE_TransformChunk3Dd);
+        uint32_t prec1 = ccl * sizeof(ANYCORE_Transform3Dd*);
     #endif
 #endif
     uint32_t prec3 = ccl * sizeof(ANYCORE_DirtyChunk);
@@ -53,15 +53,15 @@ static inline ANYCORE_RESULT TransformManager_onInit(ANYCORE* anycore, uint32_t 
 
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk2Df* transformchunks = ANYCORE_mmap(prec1);
+        ANYCORE_Transform2Df** transformchunks = ANYCORE_mmap(prec1);
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk2Dd* transformchunks = ANYCORE_mmap(prec1);
+        ANYCORE_Transform2Dd** transformchunks = ANYCORE_mmap(prec1);
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk3Df* transformchunks = ANYCORE_mmap(prec1);
+        ANYCORE_Transform3Df** transformchunks = ANYCORE_mmap(prec1);
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk3Dd* transformchunks = ANYCORE_mmap(prec1);
+        ANYCORE_Transform3Dd** transformchunks = ANYCORE_mmap(prec1);
     #endif
 #endif
 
@@ -96,99 +96,52 @@ static inline ANYCORE_RESULT TransformManager_onInit(ANYCORE* anycore, uint32_t 
 
 static inline ANYCORE_RESULT TransformManager_onGrow(ANYCORE* anycore, const uint32_t i) {
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
-    uint32_t prec = CHUNKSIZE * sizeof(PRESICION);
 
-    PRESICION* posxi = ANYCORE_mmap(prec);
-    PRESICION* posyi = ANYCORE_mmap(prec);
-#if SPACE == SPACE_3D
-    PRESICION* poszi = ANYCORE_mmap(prec);
-#endif
-
-#if SPACE == SPACE_3D
-    PRESICION* rotxi = ANYCORE_mmap(prec);
-    PRESICION* rotyi = ANYCORE_mmap(prec);
-#endif
-    PRESICION* rotzi = ANYCORE_mmap(prec);
-
-    PRESICION* scaxi = ANYCORE_mmap(prec);
-    PRESICION* scayi = ANYCORE_mmap(prec);
-#if SPACE == SPACE_3D
-    PRESICION* scazi = ANYCORE_mmap(prec);
+#if SPACE == SPACE_2D
+    #if PRESICION_ == PRESICION_FLOAT
+        uint32_t prec = CHUNKSIZE * sizeof(ANYCORE_Transform2Df);
+        ANYCORE_Transform2Df* transformsi = ANYCORE_mmap(prec);
+    #elif PRESICION_ == PRESICION_DOUBLE
+        uint32_t prec = CHUNKSIZE * sizeof(ANYCORE_Transform2Dd);
+        ANYCORE_Transform2Dd* transformsi = ANYCORE_mmap(prec);
+    #endif
+#elif SPACE == SPACE_3D
+    #if PRESICION_ == PRESICION_FLOAT
+        uint32_t prec = CHUNKSIZE * sizeof(ANYCORE_Transform3Df);
+        ANYCORE_Transform3Df* transformsi = ANYCORE_mmap(prec);
+    #elif PRESICION_ == PRESICION_DOUBLE
+        uint32_t prec = CHUNKSIZE * sizeof(ANYCORE_Transform3Dd);
+        ANYCORE_Transform3Dd* transformsi = ANYCORE_mmap(prec);
+    #endif
 #endif
 
     uint32_t* dirtiesi = ANYCORE_mmap(0X800 * sizeof(uint32_t));
     uint32_t* createflagsi = ANYCORE_mmap(0X800 * sizeof(uint32_t));
     uint16_t* dirtyindicesi = ANYCORE_mmap(CHUNKSIZE * sizeof(uint16_t));
 
-#if SPACE == SPACE_2D
-    if (posxi == ANYCORE_MAP_FAILED || posyi == ANYCORE_MAP_FAILED ||
-        scaxi == ANYCORE_MAP_FAILED || scayi == ANYCORE_MAP_FAILED ||
-        rotzi == ANYCORE_MAP_FAILED || dirtiesi == ANYCORE_MAP_FAILED || createflagsi == ANYCORE_MAP_FAILED || dirtyindicesi == ANYCORE_MAP_FAILED) {
-        if (posxi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(posxi, prec); }
-        if (posyi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(posyi, prec); }
-        if (rotzi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(rotzi, prec); }
-        if (scaxi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(scaxi, prec); }
-        if (scayi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(scayi, prec); }
-
-        if (dirtiesi      != ANYCORE_MAP_FAILED) { ANYCORE_munmap(dirtiesi,      0X800 * sizeof(uint32_t)); }
-        if (createflagsi  != ANYCORE_MAP_FAILED) { ANYCORE_munmap(createflagsi,  0X800     * sizeof(uint32_t)); }
+    if (transformsi == ANYCORE_MAP_FAILED || dirtiesi == ANYCORE_MAP_FAILED || createflagsi == ANYCORE_MAP_FAILED || dirtyindicesi == ANYCORE_MAP_FAILED) {
+        if (transformsi   != ANYCORE_MAP_FAILED) { ANYCORE_munmap(transformsi, prec); }
+        if (dirtiesi      != ANYCORE_MAP_FAILED) { ANYCORE_munmap(dirtiesi, 0X800 * sizeof(uint32_t)); }
+        if (createflagsi  != ANYCORE_MAP_FAILED) { ANYCORE_munmap(createflagsi, 0X800 * sizeof(uint32_t)); }
         if (dirtyindicesi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(dirtyindicesi, CHUNKSIZE * sizeof(uint16_t)); }
         return ANYCORE_ERR_ALLOC_FAILED;
     }
-#elif SPACE == SPACE_3D
-    if (posxi == ANYCORE_MAP_FAILED || posyi == ANYCORE_MAP_FAILED || poszi == ANYCORE_MAP_FAILED ||
-        rotxi == ANYCORE_MAP_FAILED || rotyi == ANYCORE_MAP_FAILED || rotzi == ANYCORE_MAP_FAILED ||
-        scaxi == ANYCORE_MAP_FAILED || scayi == ANYCORE_MAP_FAILED || scazi == ANYCORE_MAP_FAILED ||
-        dirtiesi == ANYCORE_MAP_FAILED || createflagsi == ANYCORE_MAP_FAILED || dirtyindicesi == ANYCORE_MAP_FAILED) {
-        if (posxi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(posxi, prec); }
-        if (posyi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(posyi, prec); }
-        if (poszi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(poszi, prec); }
-        if (rotxi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(rotxi, prec); }
-        if (rotyi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(rotyi, prec); }
-        if (rotzi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(rotzi, prec); }
-        if (scaxi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(scaxi, prec); }
-        if (scayi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(scayi, prec); }
-        if (scazi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(scazi, prec); }
-        
-        if (dirtiesi      != ANYCORE_MAP_FAILED) { ANYCORE_munmap(dirtiesi,      0X800     * sizeof(uint32_t)); }
-        if (createflagsi  != ANYCORE_MAP_FAILED) { ANYCORE_munmap(createflagsi,  0X800     * sizeof(uint32_t)); }
-        if (dirtyindicesi != ANYCORE_MAP_FAILED) { ANYCORE_munmap(dirtyindicesi, CHUNKSIZE * sizeof(uint16_t)); }
-        return ANYCORE_ERR_ALLOC_FAILED;
-    }
-#endif
 
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk2Df* tc = &ttm->transformChunks[i];
+        ttm->transformChunks[i] = transformsi;
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk2Dd* tc = &ttm->transformChunks[i];
+        ttm->transformChunks[i] = transformsi;
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk3Df* tc = &ttm->transformChunks[i];
+        ttm->transformChunks[i] = transformsi;
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk3Dd* tc = &ttm->transformChunks[i];
+        ttm->transformChunks[i] = transformsi;
     #endif
 #endif
+
     ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[i];
-
-    tc->posx = posxi;
-    tc->posy = posyi;
-#if SPACE == SPACE_3D
-    tc->posz = poszi;
-#endif
-
-#if SPACE == SPACE_3D
-    tc->rotx = rotxi;
-    tc->roty = rotyi;
-#endif
-    tc->rotz = rotzi;
-
-    tc->scax = scaxi;
-    tc->scay = scayi;
-#if SPACE == SPACE_3D
-    tc->scaz = scazi;
-#endif
 
     dc->dirties     = dirtiesi;
     dc->createFlags = createflagsi;
@@ -201,53 +154,31 @@ static inline void TransformManager_onFree(ANYCORE* anycore) {
     uint32_t ccl = anycore->sceneManager.chunkCountLimit;
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
 
-    uint32_t prec1 = CHUNKSIZE * sizeof(PRESICION);
-
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk2Df* tc = ttm->transformChunks;
+        uint32_t prec1 = CHUNKSIZE * sizeof(ANYCORE_Transform2Df);
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk2Dd* tc = ttm->transformChunks;
+        uint32_t prec1 = CHUNKSIZE * sizeof(ANYCORE_Transform2Dd);
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk3Df* tc = ttm->transformChunks;
+        uint32_t prec1 = CHUNKSIZE * sizeof(ANYCORE_Transform3Df);
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk3Dd* tc = ttm->transformChunks;
+        uint32_t prec1 = CHUNKSIZE * sizeof(ANYCORE_Transform3Dd);
     #endif
 #endif
+
     ANYCORE_DirtyChunk* dc = ttm->dirtyChunks;
 
     for (uint32_t i = 0; i < ccl; i++) {
-        #if SPACE == SPACE_2D
-            ANYCORE_munmap(tc[i].posx, prec1); ANYCORE_munmap(tc[i].posy, prec1);
-            ANYCORE_munmap(tc[i].rotz, prec1);
-            ANYCORE_munmap(tc[i].scax, prec1); ANYCORE_munmap(tc[i].scay, prec1);
-        #elif SPACE == SPACE_3D
-            ANYCORE_munmap(tc[i].posx, prec1); ANYCORE_munmap(tc[i].posy, prec1); ANYCORE_munmap(tc[i].posz, prec1);
-            ANYCORE_munmap(tc[i].rotx, prec1); ANYCORE_munmap(tc[i].roty, prec1); ANYCORE_munmap(tc[i].rotz, prec1);
-            ANYCORE_munmap(tc[i].scax, prec1); ANYCORE_munmap(tc[i].scay, prec1); ANYCORE_munmap(tc[i].scaz, prec1);
-        #endif
-        ANYCORE_munmap(dc[i].dirties,     0X800 * sizeof(uint32_t));
+        ANYCORE_munmap(ttm->transformChunks[i], prec1);
+        ANYCORE_munmap(dc[i].dirties, 0X800 * sizeof(uint32_t));
         ANYCORE_munmap(dc[i].createFlags, 0X800 * sizeof(uint32_t));
-        ANYCORE_munmap(dc[i].dirtyList,   CHUNKSIZE * sizeof(uint16_t));
+        ANYCORE_munmap(dc[i].dirtyList, CHUNKSIZE * sizeof(uint16_t));
     }
 
-#if SPACE == SPACE_2D
-    #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_munmap(ttm->transformChunks, ccl * sizeof(ANYCORE_TransformChunk2Df));
-    #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_munmap(ttm->transformChunks, ccl * sizeof(ANYCORE_TransformChunk2Dd));
-    #endif
-#elif SPACE == SPACE_3D
-    #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_munmap(ttm->transformChunks, ccl * sizeof(ANYCORE_TransformChunk3Df));
-    #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_munmap(ttm->transformChunks, ccl * sizeof(ANYCORE_TransformChunk3Dd));
-    #endif
-#endif
+    ANYCORE_munmap(ttm->transformChunks, ccl * sizeof(*ttm->transformChunks));
     ANYCORE_munmap(ttm->dirtyChunks, ccl * sizeof(ANYCORE_DirtyChunk));
-
     ANYCORE_munmap(ttm->dcsflags, ((ccl + 7) >> 3) * sizeof(uint8_t));
     ANYCORE_munmap(ttm->chunkDirtyList, ccl * sizeof(uint16_t));
 }

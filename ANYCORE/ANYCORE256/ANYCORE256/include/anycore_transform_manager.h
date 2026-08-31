@@ -22,15 +22,15 @@
 typedef struct {
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk2Df* transformChunks;
+        ANYCORE_Transform2Df** transformChunks;
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk2Dd* transformChunks;
+        ANYCORE_Transform2Dd** transformChunks;
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk3Df* transformChunks;
+        ANYCORE_Transform3Df** transformChunks;
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk3Dd* transformChunks;
+        ANYCORE_Transform3Dd** transformChunks;
     #endif
 #endif
 

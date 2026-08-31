@@ -37,10 +37,10 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC2DTYPE* tc = &ttm->transformChunks[page];
+        TC2DTYPE* tc = ttm->transformChunks[page];
 
-        tc->posx[slot] = newPosition.x;
-        tc->posy[slot] = newPosition.y;
+        tc[slot].posx = newPosition.x;
+        tc[slot].posy = newPosition.y;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -66,7 +66,7 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        ttm->transformChunks[page].rotz[slot] = newRotation;
+        ttm->transformChunks[page][slot].rotz = newRotation;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -92,10 +92,10 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC2DTYPE* tc = &ttm->transformChunks[page];
+        TC2DTYPE* tc = ttm->transformChunks[page];
 
-        tc->scax[slot] = newScale.x;
-        tc->scay[slot] = newScale.y;
+        tc[slot].scax = newScale.x;
+        tc[slot].scay = newScale.y;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -122,10 +122,10 @@
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
         if (outPosition) {
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
-            outPosition->x = tc->posx[slot];
-            outPosition->y = tc->posy[slot];
+            outPosition->x = tc[slot].posx;
+            outPosition->y = tc[slot].posy;
         }
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
@@ -153,7 +153,7 @@
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
         if (outRotation) {
-            *outRotation = ttm->transformChunks[page].rotz[slot];
+            *outRotation = ttm->transformChunks[page][slot].rotz;
         }
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
@@ -181,10 +181,10 @@
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
         if (outScale) {
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
-            outScale->x = tc->scax[slot];
-            outScale->y = tc->scay[slot];
+            outScale->x = tc[slot].scax;
+            outScale->y = tc[slot].scay;
         }
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
@@ -211,10 +211,10 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC2DTYPE* tc = &ttm->transformChunks[page];
+        TC2DTYPE* tc = ttm->transformChunks[page];
 
-        tc->posx[slot] += additionalPosition.x;
-        tc->posy[slot] += additionalPosition.y;
+        tc[slot].posx += additionalPosition.x;
+        tc[slot].posy += additionalPosition.y;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -240,7 +240,7 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        ttm->transformChunks[page].rotz[slot] += additionalRotation;
+        ttm->transformChunks[page][slot].rotz += additionalRotation;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -266,10 +266,10 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC2DTYPE* tc = &ttm->transformChunks[page];
+        TC2DTYPE* tc = ttm->transformChunks[page];
 
-        tc->scax[slot] += additionalScale.x;
-        tc->scay[slot] += additionalScale.y;
+        tc[slot].scax += additionalScale.x;
+        tc[slot].scay += additionalScale.y;
 
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -301,14 +301,13 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
             VEC2DTYPE newPosition = newPositions[i];
-            tc->posx[slot] = newPosition.x;
-            tc->posy[slot] = newPosition.y;
+            tc[slot].posx = newPosition.x;
+            tc[slot].posy = newPosition.y;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -325,7 +324,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -341,9 +339,9 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
-            tc->rotz[slot] = newRotations[i];
+            tc[slot].rotz = newRotations[i];
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
 
@@ -379,11 +377,11 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
             VEC2DTYPE newScale = newScales[i];
-            tc->scax[slot] = newScale.x;
-            tc->scay[slot] = newScale.y;
+            tc[slot].scax = newScale.x;
+            tc[slot].scay = newScale.y;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
 
@@ -419,12 +417,11 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
-            outPositions[i] = (VEC2DTYPE){ tc->posx[slot], tc->posy[slot] };
+            outPositions[i] = (VEC2DTYPE){ tc[slot].posx, tc[slot].posy };
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -441,7 +438,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -457,9 +453,9 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
-            outRotations[i] = tc->rotz[slot];
+            outRotations[i] = tc[slot].rotz;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
 
@@ -495,9 +491,9 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
-            outScales[i] = (VEC2DTYPE){ tc->scax[slot], tc->scay[slot] };
+            outScales[i] = (VEC2DTYPE){ tc[slot].scax, tc[slot].scay };
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
 
@@ -533,11 +529,11 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
             VEC2DTYPE value = values[i];
-            tc->posx[slot] += value.x;
-            tc->posy[slot] += value.y;
+            tc[slot].posx += value.x;
+            tc[slot].posy += value.y;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
 
@@ -573,12 +569,11 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
-            tc->rotz[slot] += values[i];
+            tc[slot].rotz += values[i];
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -611,11 +606,11 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC2DTYPE* tc = &ttm->transformChunks[page];
+            TC2DTYPE* tc = ttm->transformChunks[page];
 
             VEC2DTYPE value = values[i];
-            tc->scax[slot] += value.x;
-            tc->scay[slot] += value.y;
+            tc[slot].scax += value.x;
+            tc[slot].scay += value.y;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
 
@@ -634,7 +629,7 @@
         ANYCORE_SceneManager* sm = &anycore->sceneManager;
         if (page >= sm->chunkcount) { return ANYCORE_ERR_ENTITY_DEAD; }
         ANYCORE_SceneChunk* sc = &sm->sceneChunks[page];
-        
+
         uint32_t wordindx = slot >> 5;
         uint32_t mask     = 1u << (slot & 31);
 
@@ -646,12 +641,12 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC3DTYPE* tc = &ttm->transformChunks[page];
+        TC3DTYPE* tc = ttm->transformChunks[page];
 
-        tc->posx[slot] = newPosition.x;
-        tc->posy[slot] = newPosition.y;
-        tc->posz[slot] = newPosition.z;
-        
+        tc[slot].posx = newPosition.x;
+        tc[slot].posy = newPosition.y;
+        tc[slot].posz = newPosition.z;
+
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
     }
@@ -676,11 +671,11 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC3DTYPE* tc = &ttm->transformChunks[page];
+        TC3DTYPE* tc = ttm->transformChunks[page];
 
-        tc->rotx[slot] = newRotation.x;
-        tc->roty[slot] = newRotation.y;
-        tc->rotz[slot] = newRotation.z;
+        tc[slot].rotx = newRotation.x;
+        tc[slot].roty = newRotation.y;
+        tc[slot].rotz = newRotation.z;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -706,11 +701,11 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC3DTYPE* tc = &ttm->transformChunks[page];
+        TC3DTYPE* tc = ttm->transformChunks[page];
 
-        tc->scax[slot] = newScale.x;
-        tc->scay[slot] = newScale.y;
-        tc->scaz[slot] = newScale.z;
+        tc[slot].scax = newScale.x;
+        tc[slot].scay = newScale.y;
+        tc[slot].scaz = newScale.z;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -737,11 +732,11 @@
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
         if (outPosition) {
-            TC3DTYPE* tc = &ttm->transformChunks[page];
+            TC3DTYPE* tc = ttm->transformChunks[page];
 
-            outPosition->x = tc->posx[slot];
-            outPosition->y = tc->posy[slot];
-            outPosition->z = tc->posz[slot];
+            outPosition->x = tc[slot].posx;
+            outPosition->y = tc[slot].posy;
+            outPosition->z = tc[slot].posz;
         }
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
@@ -769,11 +764,11 @@
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
         if (outRotation) {
-            TC3DTYPE* tc = &ttm->transformChunks[page];
+            TC3DTYPE* tc = ttm->transformChunks[page];
 
-            outRotation->x = tc->rotx[slot];
-            outRotation->y = tc->roty[slot];
-            outRotation->z = tc->rotz[slot];
+            outRotation->x = tc[slot].rotx;
+            outRotation->y = tc[slot].roty;
+            outRotation->z = tc[slot].rotz;
         }
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
@@ -801,11 +796,11 @@
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
         if (outScale) {
-            TC3DTYPE* tc = &ttm->transformChunks[page];
+            TC3DTYPE* tc = ttm->transformChunks[page];
 
-            outScale->x = tc->scax[slot];
-            outScale->y = tc->scay[slot];
-            outScale->z = tc->scaz[slot];
+            outScale->x = tc[slot].scax;
+            outScale->y = tc[slot].scay;
+            outScale->z = tc[slot].scaz;
         }
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
@@ -832,11 +827,11 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC3DTYPE* tc = &ttm->transformChunks[page];
+        TC3DTYPE* tc = ttm->transformChunks[page];
 
-        tc->posx[slot] += additionalPosition.x;
-        tc->posy[slot] += additionalPosition.y;
-        tc->posz[slot] += additionalPosition.z;
+        tc[slot].posx += additionalPosition.x;
+        tc[slot].posy += additionalPosition.y;
+        tc[slot].posz += additionalPosition.z;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -862,11 +857,11 @@
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
 
-        TC3DTYPE* tc = &ttm->transformChunks[page];
+        TC3DTYPE* tc = ttm->transformChunks[page];
 
-        tc->rotx[slot] += additionalRotation.x;
-        tc->roty[slot] += additionalRotation.y;
-        tc->rotz[slot] += additionalRotation.z;
+        tc[slot].rotx += additionalRotation.x;
+        tc[slot].roty += additionalRotation.y;
+        tc[slot].rotz += additionalRotation.z;
         
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -891,11 +886,11 @@
 
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
         ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[page];
-        TC3DTYPE* tc = &ttm->transformChunks[page];
+        TC3DTYPE* tc = ttm->transformChunks[page];
 
-        tc->scax[slot] += additionalScale.x;
-        tc->scay[slot] += additionalScale.y;
-        tc->scaz[slot] += additionalScale.z;
+        tc[slot].scax += additionalScale.x;
+        tc[slot].scay += additionalScale.y;
+        tc[slot].scaz += additionalScale.z;
 
         markDirty(ttm, dc, ttm->dcsflags, page, slot, wordindx, mask);
         return ANYCORE_SUCCESS;
@@ -911,7 +906,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
 
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -927,15 +921,14 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
+            TC3DTYPE* tc = ttm->transformChunks[page];
 
             VEC3DTYPE newPosition = newPositions[i];
-            tc->posx[slot] = newPosition.x;
-            tc->posy[slot] = newPosition.y;
-            tc->posz[slot] = newPosition.z;
+            tc[slot].posx = newPosition.x;
+            tc[slot].posy = newPosition.y;
+            tc[slot].posz = newPosition.z;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -952,7 +945,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
 
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -968,15 +960,14 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
+            TC3DTYPE* tc = ttm->transformChunks[page];
 
             VEC3DTYPE newRotation = newRotations[i];
-            tc->rotx[slot] = newRotation.x;
-            tc->roty[slot] = newRotation.y;
-            tc->rotz[slot] = newRotation.z;
+            tc[slot].rotx = newRotation.x;
+            tc[slot].roty = newRotation.y;
+            tc[slot].rotz = newRotation.z;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -993,7 +984,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -1009,15 +999,14 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
+            TC3DTYPE* tc = ttm->transformChunks[page];
 
             VEC3DTYPE newScale = newScales[i];
-            tc->scax[slot] = newScale.x;
-            tc->scay[slot] = newScale.y;
-            tc->scaz[slot] = newScale.z;
+            tc[slot].scax = newScale.x;
+            tc[slot].scay = newScale.y;
+            tc[slot].scaz = newScale.z;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -1034,7 +1023,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -1047,15 +1035,13 @@
             uint32_t mask     = 1u << (slot & 31);
 
             if ((!((sc->validFlags[wordindx] & mask) &&
-            (sc->generations[slot] == entityID.generation))) ||
-            (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
+                (sc->generations[slot] == entityID.generation))) ||
+                (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
-
-            outPositions[i] = (VEC3DTYPE){ tc->posx[slot], tc->posy[slot], tc->posz[slot] };
+            TC3DTYPE* tc = ttm->transformChunks[page];
+            outPositions[i] = (VEC3DTYPE){ tc[slot].posx, tc[slot].posy, tc[slot].posz };
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -1072,7 +1058,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -1088,12 +1073,10 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
-
-            outRotations[i] = (VEC3DTYPE){ tc->rotx[slot], tc->roty[slot], tc->rotz[slot] };
+            TC3DTYPE* tc = ttm->transformChunks[page];
+            outRotations[i] = (VEC3DTYPE){ tc[slot].rotx, tc[slot].roty, tc[slot].rotz };
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -1110,7 +1093,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -1124,14 +1106,12 @@
 
             if ((!((sc->validFlags[wordindx] & mask) &&
             (sc->generations[slot] == entityID.generation))) ||
-            (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
+                (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
-
-            outScales[i] = (VEC3DTYPE){ tc->scax[slot], tc->scay[slot], tc->scaz[slot] };
+            TC3DTYPE* tc = ttm->transformChunks[page];
+            outScales[i] = (VEC3DTYPE){ tc[slot].scax, tc[slot].scay, tc[slot].scaz };
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -1148,7 +1128,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -1164,15 +1143,14 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
-
+            TC3DTYPE* tc = ttm->transformChunks[page];
             VEC3DTYPE value = values[i];
-            tc->posx[slot] += value.x;
-            tc->posy[slot] += value.y;
-            tc->posz[slot] += value.z;
+
+            tc[slot].posx += value.x;
+            tc[slot].posy += value.y;
+            tc[slot].posz += value.z;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -1205,15 +1183,14 @@
             (sc->generations[slot] == entityID.generation))) ||
             (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
-
+            TC3DTYPE* tc = ttm->transformChunks[page];
             VEC3DTYPE value = values[i];
-            tc->rotx[slot] += value.x;
-            tc->roty[slot] += value.y;
-            tc->rotz[slot] += value.z;
+
+            tc[slot].rotx += value.x;
+            tc[slot].roty += value.y;
+            tc[slot].rotz += value.z;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         
@@ -1222,7 +1199,7 @@
 #endif
 #if ANYCORE_ENABLE_ADD_SCALE_BULK
     ANYCORE_EXPORT uint32_t ANYCORE_Transform_addScaleBulk(ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* values, const uint32_t count) {
-        if (!anycore || !entityIDs) { return count; }
+        if (!anycore || !entityIDs || !values) { return count; }
         
         ANYCORE_SceneManager* sm  = &anycore->sceneManager;
         ANYCORE_TransformManager* ttm = &anycore->transformManager;
@@ -1230,7 +1207,6 @@
         uint8_t* dcsflags = ttm->dcsflags;
         
         uint32_t skippedCount = 0;
-
         for (uint32_t i = 0; i < count; i++) {
             EntityID entityID = entityIDs[i];
             uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -1243,18 +1219,17 @@
             uint32_t mask     = 1u << (slot & 31);
 
             if ((!((sc->validFlags[wordindx] & mask) &&
-            (sc->generations[slot] == entityID.generation))) ||
-            (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
+                (sc->generations[slot] == entityID.generation))) ||
+                (sc->lockFlags[wordindx] & mask)) { skippedCount++; goto skip; }
 
-            TC3DTYPE* tc = &ttm->transformChunks[page];
-
+            TC3DTYPE* tc = ttm->transformChunks[page];
             VEC3DTYPE value = values[i];
-            tc->scax[slot] += value.x;
-            tc->scay[slot] += value.y;
-            tc->scaz[slot] += value.z;
+
+            tc[slot].scax += value.x;
+            tc[slot].scay += value.y;
+            tc[slot].scaz += value.z;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
-
             skip:
         }
         

@@ -105,15 +105,15 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
 
 #if ANYCORE_ENABLE_FREE_LAST_CHUNK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
-    if (!anycore) {
-        return ANYCORE_ERR_INVALID_ANYCORE;
-    }
+    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
 
     ANYCORE_SceneManager*     sm  = &anycore->sceneManager;
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
     ANYCORE_VertexManager*    vm  = &anycore->vertexManager;
 
-    if (sm->chunkcount == 0) { return ANYCORE_ERR_NO_CHUNK; }
+    if (sm->chunkcount == 0) {
+        return ANYCORE_ERR_NO_CHUNK;
+    }
 
     const uint32_t last = sm->chunkcount - 1;
     const uint32_t activeCount = CHUNKSIZE - sm->fssize[last];
@@ -128,6 +128,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
                 break;
             }
         }
+
         sm->isusable[last] = 0;
     }
 
@@ -139,9 +140,17 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
     ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[last];
 
 #if SPACE == SPACE_2D
-    TC2DTYPE* tc = &ttm->transformChunks[last];
+    #if PRESICION_ == PRESICION_FLOAT
+        ANYCORE_Transform2Df* tc = ttm->transformChunks[last];
+    #elif PRESICION_ == PRESICION_DOUBLE
+        ANYCORE_Transform2Dd* tc = ttm->transformChunks[last];
+    #endif
 #elif SPACE == SPACE_3D
-    TC3DTYPE* tc = &ttm->transformChunks[last];
+    #if PRESICION_ == PRESICION_FLOAT
+        ANYCORE_Transform3Df* tc = ttm->transformChunks[last];
+    #elif PRESICION_ == PRESICION_DOUBLE
+        ANYCORE_Transform3Dd* tc = ttm->transformChunks[last];
+    #endif
 #endif
 
     ANYCORE_munmap(sc->generations, prec2);
@@ -150,48 +159,25 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
     ANYCORE_munmap(sc->lockFlags,   prec3);
 
 #if SPACE == SPACE_2D
-    ANYCORE_munmap(tc->posx, prec1);
-    ANYCORE_munmap(tc->posy, prec1);
-    ANYCORE_munmap(tc->scax, prec1);
-    ANYCORE_munmap(tc->scay, prec1);
-    ANYCORE_munmap(tc->rotz, prec1);
+    ANYCORE_munmap(tc, prec1 * 5);
 #elif SPACE == SPACE_3D
-    ANYCORE_munmap(tc->posx, prec1);
-    ANYCORE_munmap(tc->posy, prec1);
-    ANYCORE_munmap(tc->posz, prec1);
-
-    ANYCORE_munmap(tc->rotx, prec1);
-    ANYCORE_munmap(tc->roty, prec1);
-    ANYCORE_munmap(tc->rotz, prec1);
-
-    ANYCORE_munmap(tc->scax, prec1);
-    ANYCORE_munmap(tc->scay, prec1);
-    ANYCORE_munmap(tc->scaz, prec1);
+    ANYCORE_munmap(tc, prec1 * 9);
 #endif
 
-    ANYCORE_munmap(dc->dirties, CHUNKSIZE * sizeof(uint32_t));
+    ANYCORE_munmap(dc->dirties,   CHUNKSIZE * sizeof(uint32_t));
     ANYCORE_munmap(dc->dirtyList, CHUNKSIZE * sizeof(uint16_t));
 
-    ANYCORE_munmap(vm->instanceChunks[last].instances, CHUNKSIZE * sizeof(uint32_t));
+    ANYCORE_munmap(
+        vm->instanceChunks[last].instances,
+        CHUNKSIZE * sizeof(uint32_t)
+    );
 
     sc->generations = NULL;
     sc->freeSlots   = NULL;
     sc->validFlags  = NULL;
     sc->lockFlags   = NULL;
 
-    tc->posx = NULL;
-    tc->posy = NULL;
-#if SPACE == SPACE_3D
-    tc->posz = NULL;
-    tc->rotx = NULL;
-    tc->roty = NULL;
-#endif
-    tc->rotz = NULL;
-    tc->scax = NULL;
-    tc->scay = NULL;
-#if SPACE == SPACE_3D
-    tc->scaz = NULL;
-#endif
+    ttm->transformChunks[last] = NULL;
 
     dc->dirties   = NULL;
     dc->dirtyList = NULL;
@@ -206,10 +192,14 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
 #endif
 
 #if ANYCORE_ENABLE_CREATE_ENTITY
-ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(ANYCORE* anycore, const ModelID modelID, EntityID* outEntityID) {
+ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(
+    ANYCORE* anycore,
+    const ModelID modelID,
+    EntityID* outEntityID
+) {
     ANYCORE_SceneManager*     sm  = &anycore->sceneManager;
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk* dc  = ttm->dirtyChunks;
+    ANYCORE_DirtyChunk*       dc  = ttm->dirtyChunks;
 
     uint32_t ufscsize = sm->ufscsize;
     if (ufscsize == 0) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
@@ -229,45 +219,49 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(ANYCORE* anycore, const Model
         sm->isusable[chunk] = 0;
         sm->ufscsize--;
     }
+
     sm->dsize++;
 
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk2Df* tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform2Df* tc = ttm->transformChunks[chunk];
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk2Dd* tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform2Dd* tc = ttm->transformChunks[chunk];
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk3Df* tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform3Df* tc = ttm->transformChunks[chunk];
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk3Dd* tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform3Dd* tc = ttm->transformChunks[chunk];
     #endif
 #endif
 
-    tc->posx[slot] = (PRESICION)0;
-    tc->posy[slot] = (PRESICION)0;
-#if SPACE == SPACE_3D
-    tc->posz[slot] = (PRESICION)0;
-#endif
-
-#if SPACE == SPACE_3D
-    tc->rotx[slot] = (PRESICION)0;
-    tc->roty[slot] = (PRESICION)0;
-#endif
-    tc->rotz[slot] = (PRESICION)0;
-    
-
-    tc->scax[slot] = (PRESICION)1;
-    tc->scay[slot] = (PRESICION)1;
-#if SPACE == SPACE_3D
-    tc->scaz[slot] = (PRESICION)1;
+#if SPACE == SPACE_2D
+    tc[slot] = (typeof(tc[slot])) {
+        .posx = (PRESICION)0,
+        .posy = (PRESICION)0,
+        .rotz = (PRESICION)0,
+        .scax = (PRESICION)1,
+        .scay = (PRESICION)1
+    };
+#elif SPACE == SPACE_3D
+    tc[slot] = (typeof(tc[slot])) {
+        .posx = (PRESICION)0,
+        .posy = (PRESICION)0,
+        .posz = (PRESICION)0,
+        .rotx = (PRESICION)0,
+        .roty = (PRESICION)0,
+        .rotz = (PRESICION)0,
+        .scax = (PRESICION)1,
+        .scay = (PRESICION)1,
+        .scaz = (PRESICION)1
+    };
 #endif
 
     anycore->vertexManager.instanceChunks[chunk].instances[slot] = modelID;
 
-    ID32 outslot        = (chunk << 16) | slot;
-    ID16 outgeneration  = ++sc->generations[slot];
+    ID32 outslot       = (chunk << 16) | slot;
+    ID16 outgeneration = ++sc->generations[slot];
 
     if (outEntityID) {
         outEntityID->slot       = outslot;
@@ -276,6 +270,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(ANYCORE* anycore, const Model
 
     markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
     markCreateFlag(dc, wordindx, mask, 1);
+
     return ANYCORE_SUCCESS;
 }
 #endif
@@ -399,9 +394,9 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_unlockEntity(ANYCORE* anycore, const Entit
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const ModelID modelID, EntityID* outEntityIDs, uint32_t count) {
     if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
 
-    ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
+    ANYCORE_SceneManager*     restrict sm  = &anycore->sceneManager;
     ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk* restrict dc  = ttm->dirtyChunks;
+    ANYCORE_DirtyChunk*       restrict dc  = ttm->dirtyChunks;
 
     if (count == 0) { return ANYCORE_SUCCESS; }
 
@@ -410,31 +405,38 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const M
 
     uint32_t totalfs = 0;
     for (uint32_t i = 0; i < ufscsize; i++) { totalfs += sm->fssize[i]; }
-    if (totalfs < count) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
 
+    if (totalfs < count) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
     uint32_t chunk = sm->usablefsc[ufscsize - 1];
+
     ANYCORE_SceneChunk* restrict sc = &sm->sceneChunks[chunk];
+
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk2Df* restrict tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform2Df* restrict tc =
+            ttm->transformChunks[chunk];
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk2Dd* restrict tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform2Dd* restrict tc =
+            ttm->transformChunks[chunk];
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_TransformChunk3Df* restrict tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform3Df* restrict tc =
+            ttm->transformChunks[chunk];
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_TransformChunk3Dd* restrict tc = &ttm->transformChunks[chunk];
+        ANYCORE_Transform3Dd* restrict tc =
+            ttm->transformChunks[chunk];
     #endif
 #endif
 
     for (uint32_t i = 0; i < count; i++) {
         uint32_t currentChunk = sm->usablefsc[sm->ufscsize - 1];
+
         if (chunk != currentChunk) {
             chunk = currentChunk;
 
             sc = &sm->sceneChunks[chunk];
-            tc = &ttm->transformChunks[chunk];
+            tc = ttm->transformChunks[chunk];
         }
 
         uint32_t idx  = --sm->fssize[chunk];
@@ -450,31 +452,52 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const M
             sm->ufscsize--;
         }
 
-        tc->posx[slot] = (PRESICION)0;
-        tc->posy[slot] = (PRESICION)0;
-#if SPACE == SPACE_3D
-        tc->posz[slot] = (PRESICION)0;
-#endif
+#if SPACE == SPACE_2D
+        tc[slot] = (ANYCORE_Transform2Df) {
+            .posx = (PRESICION)0,
+            .posy = (PRESICION)0,
+            .rotz = (PRESICION)0,
+            .scax = (PRESICION)1,
+            .scay = (PRESICION)1
+        };
+#elif SPACE == SPACE_3D
+        tc[slot] = (ANYCORE_Transform3Df) {
+            .posx = (PRESICION)0,
+            .posy = (PRESICION)0,
+            .posz = (PRESICION)0,
 
-#if SPACE == SPACE_3D
-        tc->rotx[slot] = (PRESICION)0;
-        tc->roty[slot] = (PRESICION)0;
-#endif
-        tc->rotz[slot] = (PRESICION)0;
-    
+            .rotx = (PRESICION)0,
+            .roty = (PRESICION)0,
+            .rotz = (PRESICION)0,
 
-        tc->scax[slot] = (PRESICION)1;
-        tc->scay[slot] = (PRESICION)1;
-#if SPACE == SPACE_3D
-        tc->scaz[slot] = (PRESICION)1;
+            .scax = (PRESICION)1,
+            .scay = (PRESICION)1,
+            .scaz = (PRESICION)1
+        };
 #endif
 
         anycore->vertexManager.instanceChunks[chunk].instances[slot] = modelID;
 
-        if (outEntityIDs) { outEntityIDs[i] = (EntityID){ (chunk << 16) | slot, ++sc->generations[slot] }; }
-        markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
+        if (outEntityIDs) {
+            outEntityIDs[i] = (EntityID) {
+                (chunk << 16) | slot,
+                ++sc->generations[slot]
+            };
+        }
+
+        markDirty(
+            ttm,
+            dc,
+            ttm->dcsflags,
+            chunk,
+            slot,
+            wordindx,
+            mask
+        );
+
         markCreateFlag(dc, wordindx, mask, 1);
     }
+
     sm->dsize += count;
 
     return ANYCORE_SUCCESS;

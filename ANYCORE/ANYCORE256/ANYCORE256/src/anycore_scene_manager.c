@@ -111,9 +111,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
     ANYCORE_VertexManager*    vm  = &anycore->vertexManager;
 
-    if (sm->chunkcount == 0) {
-        return ANYCORE_ERR_NO_CHUNK;
-    }
+    if (sm->chunkcount == 0) { return ANYCORE_ERR_NO_CHUNK; }
 
     const uint32_t last = sm->chunkcount - 1;
     const uint32_t activeCount = CHUNKSIZE - sm->fssize[last];
@@ -128,7 +126,6 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
                 break;
             }
         }
-
         sm->isusable[last] = 0;
     }
 
@@ -164,13 +161,11 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
     ANYCORE_munmap(tc, prec1 * 9);
 #endif
 
-    ANYCORE_munmap(dc->dirties,   CHUNKSIZE * sizeof(uint32_t));
-    ANYCORE_munmap(dc->dirtyList, CHUNKSIZE * sizeof(uint16_t));
+    ANYCORE_munmap(dc->dirties,     CHUNKSIZE * sizeof(uint32_t));
+    ANYCORE_munmap(dc->dirtyList,   CHUNKSIZE * sizeof(uint16_t));
+    ANYCORE_munmap(dc->createFlags, prec3);
 
-    ANYCORE_munmap(
-        vm->instanceChunks[last].instances,
-        CHUNKSIZE * sizeof(uint32_t)
-    );
+    ANYCORE_munmap(vm->instanceChunks[last].instances, CHUNKSIZE * sizeof(uint32_t));
 
     sc->generations = NULL;
     sc->freeSlots   = NULL;
@@ -179,8 +174,9 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
 
     ttm->transformChunks[last] = NULL;
 
-    dc->dirties   = NULL;
-    dc->dirtyList = NULL;
+    dc->dirties     = NULL;
+    dc->dirtyList   = NULL;
+    dc->createFlags = NULL;
 
     vm->instanceChunks[last].instances = NULL;
 
@@ -192,20 +188,18 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
 #endif
 
 #if ANYCORE_ENABLE_CREATE_ENTITY
-ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(
-    ANYCORE* anycore,
-    const ModelID modelID,
-    EntityID* outEntityID
-) {
-    ANYCORE_SceneManager*     sm  = &anycore->sceneManager;
+ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(ANYCORE* anycore, const ModelID modelID, EntityID* outEntityID) {
+    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+
+    ANYCORE_SceneManager* sm = &anycore->sceneManager;
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk*       dc  = ttm->dirtyChunks;
 
     uint32_t ufscsize = sm->ufscsize;
     if (ufscsize == 0) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
 
     uint32_t chunk = sm->usablefsc[ufscsize - 1];
     ANYCORE_SceneChunk* sc = &sm->sceneChunks[chunk];
+    ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[chunk];
 
     uint32_t idx  = --sm->fssize[chunk];
     uint32_t slot = sc->freeSlots[idx];
@@ -260,17 +254,18 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(
 
     anycore->vertexManager.instanceChunks[chunk].instances[slot] = modelID;
 
-    ID32 outslot       = (chunk << 16) | slot;
+    ID32 outslot = (chunk << CHUNKSHIFT) | slot;
     ID16 outgeneration = ++sc->generations[slot];
 
     if (outEntityID) {
-        outEntityID->slot       = outslot;
-        outEntityID->generation = outgeneration;
+        *outEntityID = (EntityID){
+            .slot = outslot,
+            .generation = outgeneration
+        };
     }
 
     markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
     markCreateFlag(dc, wordindx, mask, 1);
-
     return ANYCORE_SUCCESS;
 }
 #endif
@@ -279,7 +274,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntity(ANYCORE* anycore, EntityID* outEntityID) {
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
-    uint32_t ufscsize  = sm->ufscsize;
+    uint32_t ufscsize = sm->ufscsize;
     if (ufscsize == 0) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
 
     uint32_t chunk = sm->usablefsc[ufscsize - 1];
@@ -297,18 +292,19 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntity(ANYCORE* anycore, EntityID* 
         sm->isusable[chunk] = 0;
         sm->ufscsize--;
     }
+
     sm->dsize++;
 
-    ID32 outslot       = (chunk << 16) | slot;
-    ID16 outgeneration = sc->generations[slot];
-
     if (outEntityID) {
-        outEntityID->slot       = outslot;
-        outEntityID->generation = outgeneration;
+        *outEntityID = (EntityID){
+            .slot = (chunk << CHUNKSHIFT) | slot,
+            .generation = sc->generations[slot]
+        };
     }
 
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk* dc  = ttm->dirtyChunks;
+    ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[chunk];
+
     markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
     return ANYCORE_SUCCESS;
 }
@@ -343,7 +339,8 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_destroyEntity(ANYCORE* anycore, const Enti
     sm->dsize--;
 
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk* dc  = ttm->dirtyChunks;
+    ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[chunk];
+
     markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
     markCreateFlag(dc, wordindx, mask, 0);
     return ANYCORE_SUCCESS;
@@ -393,57 +390,50 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_unlockEntity(ANYCORE* anycore, const Entit
 #if ANYCORE_ENABLE_CREATE_ENTITY_BULK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const ModelID modelID, EntityID* outEntityIDs, uint32_t count) {
     if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
-
-    ANYCORE_SceneManager*     restrict sm  = &anycore->sceneManager;
-    ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk*       restrict dc  = ttm->dirtyChunks;
-
     if (count == 0) { return ANYCORE_SUCCESS; }
+
+    ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
+    ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
 
     uint32_t ufscsize = sm->ufscsize;
     if (ufscsize == 0) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
 
     uint32_t totalfs = 0;
-    for (uint32_t i = 0; i < ufscsize; i++) { totalfs += sm->fssize[i]; }
-
+    for (uint32_t i = 0; i < ufscsize; i++) { totalfs += sm->fssize[sm->usablefsc[i]]; }
     if (totalfs < count) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
-    uint32_t chunk = sm->usablefsc[ufscsize - 1];
 
+    uint32_t chunk = sm->usablefsc[ufscsize - 1];
     ANYCORE_SceneChunk* restrict sc = &sm->sceneChunks[chunk];
 
 #if SPACE == SPACE_2D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_Transform2Df* restrict tc =
-            ttm->transformChunks[chunk];
+        ANYCORE_Transform2Df* restrict tc = ttm->transformChunks[chunk];
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_Transform2Dd* restrict tc =
-            ttm->transformChunks[chunk];
+        ANYCORE_Transform2Dd* restrict tc = ttm->transformChunks[chunk];
     #endif
 #elif SPACE == SPACE_3D
     #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_Transform3Df* restrict tc =
-            ttm->transformChunks[chunk];
+        ANYCORE_Transform3Df* restrict tc = ttm->transformChunks[chunk];
     #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_Transform3Dd* restrict tc =
-            ttm->transformChunks[chunk];
+        ANYCORE_Transform3Dd* restrict tc = ttm->transformChunks[chunk];
     #endif
 #endif
 
     for (uint32_t i = 0; i < count; i++) {
         uint32_t currentChunk = sm->usablefsc[sm->ufscsize - 1];
-
         if (chunk != currentChunk) {
             chunk = currentChunk;
-
             sc = &sm->sceneChunks[chunk];
             tc = ttm->transformChunks[chunk];
         }
 
-        uint32_t idx  = --sm->fssize[chunk];
+        ANYCORE_DirtyChunk* restrict dc = &ttm->dirtyChunks[chunk];
+
+        uint32_t idx = --sm->fssize[chunk];
         uint32_t slot = sc->freeSlots[idx];
 
         uint32_t wordindx = slot >> 5;
-        uint32_t mask     = 1u << (slot & 31);
+        uint32_t mask = 1u << (slot & 31);
 
         sc->validFlags[wordindx] |= mask;
 
@@ -453,53 +443,68 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const M
         }
 
 #if SPACE == SPACE_2D
-        tc[slot] = (ANYCORE_Transform2Df) {
-            .posx = (PRESICION)0,
-            .posy = (PRESICION)0,
-            .rotz = (PRESICION)0,
-            .scax = (PRESICION)1,
-            .scay = (PRESICION)1
-        };
+        #if PRESICION_ == PRESICION_FLOAT
+            tc[slot] = (ANYCORE_Transform2Df) {
+                .posx = (PRESICION)0,
+                .posy = (PRESICION)0,
+                .rotz = (PRESICION)0,
+                .scax = (PRESICION)1,
+                .scay = (PRESICION)1
+            };
+        #elif PRESICION_ == PRESICION_DOUBLE
+            tc[slot] = (ANYCORE_Transform2Dd) {
+                .posx = (PRESICION)0,
+                .posy = (PRESICION)0,
+                .rotz = (PRESICION)0,
+                .scax = (PRESICION)1,
+                .scay = (PRESICION)1
+            };
+        #endif
 #elif SPACE == SPACE_3D
-        tc[slot] = (ANYCORE_Transform3Df) {
-            .posx = (PRESICION)0,
-            .posy = (PRESICION)0,
-            .posz = (PRESICION)0,
-
-            .rotx = (PRESICION)0,
-            .roty = (PRESICION)0,
-            .rotz = (PRESICION)0,
-
-            .scax = (PRESICION)1,
-            .scay = (PRESICION)1,
-            .scaz = (PRESICION)1
-        };
+        #if PRESICION_ == PRESICION_FLOAT
+            tc[slot] = (ANYCORE_Transform3Df) {
+                .posx = (PRESICION)0,
+                .posy = (PRESICION)0,
+                .posz = (PRESICION)0,
+                .rotx = (PRESICION)0,
+                .roty = (PRESICION)0,
+                .rotz = (PRESICION)0,
+                .scax = (PRESICION)1,
+                .scay = (PRESICION)1,
+                .scaz = (PRESICION)1
+            };
+        #elif PRESICION_ == PRESICION_DOUBLE
+            tc[slot] = (ANYCORE_Transform3Dd) {
+                .posx = (PRESICION)0,
+                .posy = (PRESICION)0,
+                .posz = (PRESICION)0,
+                .rotx = (PRESICION)0,
+                .roty = (PRESICION)0,
+                .rotz = (PRESICION)0,
+                .scax = (PRESICION)1,
+                .scay = (PRESICION)1,
+                .scaz = (PRESICION)1
+            };
+        #endif
 #endif
 
         anycore->vertexManager.instanceChunks[chunk].instances[slot] = modelID;
 
+        ID32 outslot = (chunk << CHUNKSHIFT) | slot;
+        ID16 outgeneration = ++sc->generations[slot];
+
         if (outEntityIDs) {
             outEntityIDs[i] = (EntityID) {
-                (chunk << 16) | slot,
-                ++sc->generations[slot]
+                .slot = outslot,
+                .generation = outgeneration
             };
         }
 
-        markDirty(
-            ttm,
-            dc,
-            ttm->dcsflags,
-            chunk,
-            slot,
-            wordindx,
-            mask
-        );
-
+        markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
         markCreateFlag(dc, wordindx, mask, 1);
     }
 
     sm->dsize += count;
-
     return ANYCORE_SUCCESS;
 }
 #endif
@@ -507,35 +512,36 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const M
 #if ANYCORE_ENABLE_RESTORE_ENTITY_BULK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntityBulk(ANYCORE* anycore, EntityID* outEntityIDs, uint32_t count) {
     if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (count == 0) { return ANYCORE_SUCCESS; }
 
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
     ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk* restrict dc  = ttm->dirtyChunks;
-
-    if (count == 0) { return ANYCORE_SUCCESS; }
 
     uint32_t ufscsize = sm->ufscsize;
     if (ufscsize == 0) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
 
     uint32_t totalfs = 0;
-    for (uint32_t i = 0; i < ufscsize; i++) { totalfs += sm->fssize[i]; }
+    for (uint32_t i = 0; i < ufscsize; i++) { totalfs += sm->fssize[sm->usablefsc[i]]; }
     if (totalfs < count) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
 
     uint32_t chunk = sm->usablefsc[ufscsize - 1];
-    const ANYCORE_SceneChunk* restrict sc = &sm->sceneChunks[chunk];
+    ANYCORE_SceneChunk* restrict sc = &sm->sceneChunks[chunk];
 
     for (uint32_t i = 0; i < count; i++) {
         uint32_t currentChunk = sm->usablefsc[sm->ufscsize - 1];
+
         if (chunk != currentChunk) {
             chunk = currentChunk;
             sc = &sm->sceneChunks[chunk];
         }
 
-        uint32_t idx  = --sm->fssize[chunk];
+        ANYCORE_DirtyChunk* restrict dc = &ttm->dirtyChunks[chunk];
+
+        uint32_t idx = --sm->fssize[chunk];
         uint32_t slot = sc->freeSlots[idx];
 
         uint32_t wordindx = slot >> 5;
-        uint32_t mask     = 1u << (slot & 31);
+        uint32_t mask = 1u << (slot & 31);
 
         sc->validFlags[wordindx] |= mask;
 
@@ -544,11 +550,17 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntityBulk(ANYCORE* anycore, Entity
             sm->ufscsize--;
         }
 
-        if (outEntityIDs) { outEntityIDs[i] = (EntityID){ (chunk << 16) | slot, sc->generations[slot] }; }
+        if (outEntityIDs) {
+            outEntityIDs[i] = (EntityID) {
+                .slot = (chunk << CHUNKSHIFT) | slot,
+                .generation = sc->generations[slot]
+            };
+        }
+
         markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
     }
-    sm->dsize += count;
 
+    sm->dsize += count;
     return ANYCORE_SUCCESS;
 }
 #endif
@@ -560,8 +572,8 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_destroyEntityBulk(ANYCORE* anycore, Entity
 
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
     ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk* restrict dc  = ttm->dirtyChunks;
 
+    ANYCORE_DirtyChunk* restrict adc = ttm->dirtyChunks;
     ANYCORE_SceneChunk* restrict asc = sm->sceneChunks;
 
     uint32_t skippedcount = 0;
@@ -589,6 +601,8 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_destroyEntityBulk(ANYCORE* anycore, Entity
             sm->usablefsc[sm->ufscsize++] = chunk;
             sm->isusable[chunk] = 1;
         }
+
+        ANYCORE_DirtyChunk* restrict dc = &adc[chunk];
 
         markDirty(ttm, dc, ttm->dcsflags, chunk, slot, wordindx, mask);
         markCreateFlag(dc, wordindx, mask, 0);
@@ -662,12 +676,13 @@ ANYCORE_EXPORT uint32_t ANYCORE_destroyAllEntities(ANYCORE* anycore) {
 
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
     ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
-    ANYCORE_DirtyChunk* restrict dc  = ttm->dirtyChunks;
+    ANYCORE_DirtyChunk* restrict adc = ttm->dirtyChunks;
 
     uint32_t totaldestroyed = 0;
-
     for (uint32_t c = 0; c < sm->chunkcount; c++) {
         ANYCORE_SceneChunk* restrict sc = &sm->sceneChunks[c];
+        ANYCORE_DirtyChunk* restrict dc = &adc[c];
+
         uint32_t words = (CHUNKMASK >> 5) + 1;
         uint32_t chunk_modified = 0;
 
@@ -679,11 +694,13 @@ ANYCORE_EXPORT uint32_t ANYCORE_destroyAllEntities(ANYCORE* anycore) {
                 uint32_t mask = 1u << bit;
                 if (todelete & mask) {
                     uint32_t slot = (w << 5) + bit;
-                    
+
                     sc->validFlags[w] &= ~mask;
                     sc->freeSlots[sm->fssize[c]++] = slot;
-                    
+
                     markDirty(ttm, dc, ttm->dcsflags, c, slot, w, mask);
+                    markCreateFlag(dc, w, mask, 0);
+
                     totaldestroyed++;
                     chunk_modified = 1;
                 }
@@ -695,8 +712,8 @@ ANYCORE_EXPORT uint32_t ANYCORE_destroyAllEntities(ANYCORE* anycore) {
             sm->isusable[c] = 1;
         }
     }
-    sm->dsize -= totaldestroyed;
 
+    sm->dsize -= totaldestroyed;
     return totaldestroyed;
 }
 #endif

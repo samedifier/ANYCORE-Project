@@ -257,8 +257,7 @@ ANYCORE_EXPORT void ANYCORE_run(ANYCORE* anycore) {
         }
 
         clearDirtyFrame(&anycore->transformManager,   anycore->sceneManager.chunkcount);
-        clearModelDirtyFrame(&anycore->vertexManager, anycore->vertexManager.modelCount >> CHUNKSHIFT);
-
+        clearModelDirtyFrame(&anycore->vertexManager, (anycore->vertexManager.modelCount + CHUNKSIZE - 1) >> CHUNKSHIFT);
         anycore->timeManager.frame++;
     }
 

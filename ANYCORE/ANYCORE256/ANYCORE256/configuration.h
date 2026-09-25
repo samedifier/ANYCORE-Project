@@ -36,6 +36,7 @@
 #define ANYCORE_ENABLE_IMPORT_FUNCTION                   ON
 #define ANYCORE_ENABLE_KILL_MODULE                       ON
 
+#define ANYCORE_ENABLE_NEXT_ENTITY_ID                    ON
 #define ANYCORE_ENABLE_IS_ENTITY_ALIVE                   ON
 #define ANYCORE_ENABLE_IS_ENTITY_LOCKED                  ON
 

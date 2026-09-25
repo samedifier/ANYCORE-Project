@@ -16,6 +16,29 @@
 #include "anycore_scene_manager_utils.h"
 #include "anycore_transform_manager_utils.h"
 
+#if ANYCORE_ENABLE_NEXT_ENTITY_ID
+ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_nextEntityID(ANYCORE* anycore, EntityID* nextEntityID) {
+    ANYCORE_SceneManager* sm = &anycore->sceneManager;
+
+    uint32_t ufscsize = sm->ufscsize;
+    if (ufscsize == 0) { return ANYCORE_ERR_FREE_SLOT_NOT_FOUND; }
+
+    uint32_t chunk = sm->usablefsc[ufscsize - 1];
+    ANYCORE_SceneChunk* sc = &sm->sceneChunks[chunk];
+
+    uint32_t idx  = sm->fssize[chunk] - 1;
+    uint32_t slot = sc->freeSlots[idx];
+
+    if (nextEntityID) {
+        *nextEntityID = (EntityID){
+            .slot       = (chunk << CHUNKSHIFT) | slot,
+            .generation = sc->generations[slot] + 1
+        };
+    }
+    return ANYCORE_SUCCESS;
+}
+#endif
+
 #if ANYCORE_ENABLE_IS_ENTITY_ALIVE
 ANYCORE_EXPORT bool ANYCORE_isEntityAlive(ANYCORE* anycore, const EntityID entityID) {
     ANYCORE_SceneManager* sm = &anycore->sceneManager;

@@ -20,6 +20,10 @@
 #include "anycore_transform_manager_utils.h"
 #include "anycore_vertex_manager_utils.h"
 
+#if ANYCORE_ENABLE_NEXT_ENTITY_ID
+ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_nextEntityID(ANYCORE* anycore, EntityID* nextEntityID);
+#endif
+
 #if ANYCORE_ENABLE_IS_ENTITY_ALIVE
 ANYCORE_EXPORT bool ANYCORE_isEntityAlive(ANYCORE* anycore, const EntityID entityID);
 #endif

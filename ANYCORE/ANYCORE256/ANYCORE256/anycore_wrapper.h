@@ -83,6 +83,11 @@ typedef struct {
     /* Shuts down ANYCORE and releases its resources. */
     void           (*ANYCOREshutdown) (ANYCORE* anycore);
 
+#if ANYCORE_ENABLE_NEXT_ENTITY_ID
+    /* Returns the next EntityID without modifying scene state. */
+    ANYCORE_RESULT (*nextEntityID) (ANYCORE* anycore, EntityID* nextEntityID);
+#endif
+
 #if ANYCORE_ENABLE_IS_ENTITY_ALIVE
     /* Checks whether an entity is currently alive. */
     bool           (*isEntityAlive)          (ANYCORE* anycore, const EntityID);
@@ -390,9 +395,14 @@ static inline bool ANYCORE_Wrapper_init(ANYCORE_Wrapper* w, void* libHandle) {
 #endif
     ANYCORE_DLSYM(libHandle, "ANYCORE_shutdown",        w->ANYCOREshutdown);
 
+#if ANYCORE_ENABLE_NEXT_ENTITY_ID
+    ANYCORE_DLSYM(libHandle, "ANYCORE_nextEntityID",            w->nextEntityID);
+#endif
+
 #if ANYCORE_ENABLE_IS_ENTITY_ALIVE
     ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityAlive",           w->isEntityAlive);
 #endif
+
 #if ANYCORE_ENABLE_IS_ENTITY_LOCKED
     ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityLocked",          w->isEntityLocked);
 #endif

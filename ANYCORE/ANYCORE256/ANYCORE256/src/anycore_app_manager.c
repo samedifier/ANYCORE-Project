@@ -53,8 +53,8 @@ void* ANYCORE_moduleWorker(void* arg) {
     return NULL;
 }
 
-ANYCORE_RESULT initAppManager(ANYCORE* anycore, uint32_t startCapacity, uint32_t loopCapacity, uint32_t moduleCapacity) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+ANYCORE_RESULT initAppManager(ANYCORE* anycore, uint16_t startCapacity, uint16_t loopCapacity, uint16_t moduleCapacity) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_AppManager* am = &anycore->appManager;
 
     uint32_t prec1 = startCapacity  * sizeof(void*);
@@ -62,8 +62,8 @@ ANYCORE_RESULT initAppManager(ANYCORE* anycore, uint32_t startCapacity, uint32_t
     uint32_t prec3 = moduleCapacity * sizeof(Module);
 
     void (**starts)(void*) = ANYCORE_mmap(prec1);
-    void (**loops)(void*, const double)  = ANYCORE_mmap(prec2);
-    Module* modules        = ANYCORE_mmap(prec3);
+    void (**loops)(void*, const double) = ANYCORE_mmap(prec2);
+    Module* modules = ANYCORE_mmap(prec3);
 
     if (starts == ANYCORE_MAP_FAILED || loops == ANYCORE_MAP_FAILED || modules == ANYCORE_MAP_FAILED) {
         if (starts  != ANYCORE_MAP_FAILED) { ANYCORE_munmap(starts,  prec1); }
@@ -87,7 +87,7 @@ ANYCORE_RESULT initAppManager(ANYCORE* anycore, uint32_t startCapacity, uint32_t
 }
 
 static void ANYCORE_freeAppManager(ANYCORE* anycore) {
-    if (!anycore) { return; }
+    if (anycore == NULL) { return; }
     ANYCORE_AppManager* am = &anycore->appManager;
 
     for (int32_t i = (int32_t)am->moduleCount - 1; i >= 0; i--) {
@@ -96,9 +96,9 @@ static void ANYCORE_freeAppManager(ANYCORE* anycore) {
         #endif
     }
 
-    if (am->Starts)  ANYCORE_munmap(am->Starts,  am->startCapacity  * sizeof(void*));
-    if (am->Loops)   ANYCORE_munmap(am->Loops,   am->loopCapacity   * sizeof(void*));
-    if (am->modules) ANYCORE_munmap(am->modules, am->moduleCapacity * sizeof(Module));
+    if (am->Starts)  { ANYCORE_munmap(am->Starts,  am->startCapacity  * sizeof(void*));  }
+    if (am->Loops)   { ANYCORE_munmap(am->Loops,   am->loopCapacity   * sizeof(void*));  }
+    if (am->modules) { ANYCORE_munmap(am->modules, am->moduleCapacity * sizeof(Module)); }
 
     am->Starts = NULL;
     am->Loops = NULL;
@@ -121,7 +121,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_importFunction(void* libHandle, const char
 
 #if ANYCORE_ENABLE_LOAD_MODULE
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_loadModule(ANYCORE* anycore, const char* path, ModuleType type, double interval, void** outLibHandle) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_AppManager* am = &anycore->appManager;
 
     if (am->moduleCount >= am->moduleCapacity) { return ANYCORE_ERR_CAPACITY_REACHED; }
@@ -181,7 +181,7 @@ ANYCORE_EXPORT int ANYCORE_unloadBehaviour(void* libHandle) {
 #endif
 
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushStart(ANYCORE* anycore, void (*startFn)(void*)) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_AppManager* am = &anycore->appManager;
     if (am->startCount >= am->startCapacity) { return ANYCORE_ERR_CAPACITY_REACHED; }
     am->Starts[am->startCount++] = startFn;
@@ -189,7 +189,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushStart(ANYCORE* anycore, void (*startFn
 }
 
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushLoop(ANYCORE* anycore, void (*loopFn)(void*, double)) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_AppManager* am = &anycore->appManager;
     if (am->loopCount >= am->loopCapacity) { return ANYCORE_ERR_CAPACITY_REACHED; }
     am->Loops[am->loopCount++] = loopFn;
@@ -197,7 +197,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_pushLoop(ANYCORE* anycore, void (*loopFn)(
 }
 
 ANYCORE_EXPORT void ANYCORE_run(ANYCORE* anycore) {
-    if (!anycore) { return; }
+    if (anycore == NULL) { return; }
     ANYCORE_AppManager* am = &anycore->appManager;
 
     am->isAppRunning = true;
@@ -237,13 +237,18 @@ ANYCORE_EXPORT void ANYCORE_run(ANYCORE* anycore) {
             }
 
             if (shouldRun) {
+                pthread_mutex_lock(&m->doneMutex);
+                m->isDone = false;
+                pthread_mutex_unlock(&m->doneMutex);
+
                 pthread_mutex_lock(&m->runMutex);
                 m->readyToWork = true;
-                m->isDone      = false;
                 pthread_cond_signal(&m->runCond);
                 pthread_mutex_unlock(&m->runMutex);
             } else {
+                pthread_mutex_lock(&m->doneMutex);
                 m->isDone = true;
+                pthread_mutex_unlock(&m->doneMutex);
             }
         }
 
@@ -272,7 +277,7 @@ ANYCORE_EXPORT void ANYCORE_run(ANYCORE* anycore) {
 
 #if ANYCORE_ENABLE_KILL_MODULE
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_killModule(ANYCORE* anycore, uint32_t index) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_AppManager* am = &anycore->appManager;
     if (index >= am->moduleCount) { return ANYCORE_ERR_INVALID_INDEX; }
 

@@ -19,7 +19,7 @@
 #include "anycore.h"
 #include "anycore_app_manager.h"
 
-ANYCORE_RESULT initAppManager(ANYCORE* anycore, uint32_t startCapacity, uint32_t loopCapacity, uint32_t moduleCapacity);
+ANYCORE_RESULT initAppManager(ANYCORE* anycore, uint16_t startCapacity, uint16_t loopCapacity, uint16_t moduleCapacity);
 
 #if ANYCORE_ENABLE_IMPORT_FUNCTION
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_importFunction(void* libHandle, const char* functionName, void** outFunction);

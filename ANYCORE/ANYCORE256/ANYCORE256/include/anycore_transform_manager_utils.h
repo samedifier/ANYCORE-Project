@@ -19,6 +19,8 @@
 #include "anycore_transform_manager.h"
 #include "anycore.h"
 
+#include <string.h>
+
 #if PRESICION_ == PRESICION_FLOAT
     #define VEC2DTYPE Vec2f
     #define VEC3DTYPE Vec3f
@@ -79,7 +81,7 @@ static inline ANYCORE_RESULT TransformManager_onInit(ANYCORE* anycore, uint32_t 
         return ANYCORE_ERR_ALLOC_FAILED;
     }
 
-    ANYCORE_memset8(dcsflags, (ccl + 7) >> 3);
+    memset(dcsflags, 0, (ccl + 7u) >> 3);
 
     dirtychunks->dirtyCount = 0;
 
@@ -182,6 +184,46 @@ static inline void TransformManager_onFree(ANYCORE* anycore) {
     ANYCORE_munmap(ttm->dcsflags, ((ccl + 7) >> 3) * sizeof(uint8_t));
     ANYCORE_munmap(ttm->chunkDirtyList, ccl * sizeof(uint16_t));
 }
+
+#if SPACE == SPACE_2D
+#if ANYCORE_ENABLE_SET_TRANSFORM
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_setTransform(ANYCORE* anycore, EntityID entityID, const TC2DTYPE transform);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_addTransform(ANYCORE* anycore, EntityID entityID, const TC2DTYPE transform);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_getTransform(ANYCORE* anycore, EntityID entityID, TC2DTYPE* outTransform);
+#endif
+#if ANYCORE_ENABLE_SET_TRANSFORM_BULK
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_setTransformBulk(ANYCORE* anycore, EntityID* entityIDs, const TC2DTYPE* transforms, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM_BULK
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_addTransformBulk(ANYCORE* anycore, EntityID* entityIDs, const TC2DTYPE* transforms, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM_BULK
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_getTransformBulk(ANYCORE* anycore, EntityID* entityIDs, TC2DTYPE* outTransforms, const uint32_t count);
+#endif
+#elif SPACE == SPACE_3D
+#if ANYCORE_ENABLE_SET_TRANSFORM
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_setTransform(ANYCORE* anycore, EntityID entityID, const TC3DTYPE transform);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_addTransform(ANYCORE* anycore, EntityID entityID, const TC3DTYPE transform);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_getTransform(ANYCORE* anycore, EntityID entityID, TC3DTYPE* outTransform);
+#endif
+#if ANYCORE_ENABLE_SET_TRANSFORM_BULK
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_setTransformBulk(ANYCORE* anycore, EntityID* entityIDs, const TC3DTYPE* transforms, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM_BULK
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_addTransformBulk(ANYCORE* anycore, EntityID* entityIDs, const TC3DTYPE* transforms, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM_BULK
+    ANYCORE_EXPORT uint32_t ANYCORE_Transform_getTransformBulk(ANYCORE* anycore, EntityID* entityIDs, TC3DTYPE* outTransforms, const uint32_t count);
+#endif
+#endif
 
 #if SPACE == SPACE_2D
 #if ANYCORE_ENABLE_SET_POSITION
@@ -328,26 +370,19 @@ static inline void markDirty(ANYCORE_TransformManager* ttm, ANYCORE_DirtyChunk* 
 
 static inline void markCreateFlag(ANYCORE_DirtyChunk* dc, uint32_t wordIndex, uint32_t bittMask, uint32_t createbit) {
     uint32_t* createFlags = dc->createFlags;
-
-    if (createbit) {
-        createFlags[wordIndex] |= bittMask;
-    }
-    else {
-        createFlags[wordIndex] &= ~bittMask;
-    }
+    if (createbit) { createFlags[wordIndex] |= bittMask; }
+    else           { createFlags[wordIndex] &= ~bittMask; }
 }
 
 static inline void clearDirtyFrame(ANYCORE_TransformManager* ttm, uint32_t chunkCount) {
     ANYCORE_DirtyChunk* dc = ttm->dirtyChunks;
-
+    uint32_t prec1 = 0x800 * sizeof(uint32_t);
     for (uint32_t page = 0; page < chunkCount; page++) {
-        ANYCORE_memset32(dc[page].dirties,     0x800);
-        ANYCORE_memset32(dc[page].createFlags, 0x800);
+        memset(dc[page].dirties,     0, prec1);
+        memset(dc[page].createFlags, 0, prec1);
         dc[page].dirtyCount = 0;
     }
-
-    ANYCORE_memset8(ttm->dcsflags, (chunkCount + 7) >> 3);
-
+    memset(ttm->dcsflags, 0, (chunkCount + 7u) >> 3);
     ttm->chunkDirtyCount = 0;
 }
 

@@ -18,6 +18,7 @@
 
 #if ANYCORE_ENABLE_ADD_MODEL
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_addModel(ANYCORE* anycore, void* vertices, const uint32_t vertexCount, uint32_t* indices, const uint32_t indexCount, ModelID* outModelID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_VertexManager* vm = &anycore->vertexManager;
 
     uint32_t modelCount = vm->modelCount;
@@ -69,6 +70,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_addModel(ANYCORE* anycore, v
 
 #if ANYCORE_ENABLE_SET_MODEL
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_setModel(ANYCORE* anycore, const EntityID entityID, const ModelID modelID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t gslot = entityID.slot;
@@ -94,6 +96,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_setModel(ANYCORE* anycore, c
 
 #if ANYCORE_ENABLE_UPDATE_MODEL
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_updateModel(ANYCORE* anycore, const ModelID modelID, const void* newVertices, const uint32_t newVertexCount, const uint32_t* newIndices, const uint32_t newIndexCount) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_VertexManager* vm = &anycore->vertexManager;
 
     if (modelID >= vm->modelCount) { return ANYCORE_ERR_INVALID_MODEL_ID; }
@@ -122,6 +125,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_updateModel(ANYCORE* anycore
 
 #if ANYCORE_ENABLE_REMOVE_MODEL
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_VertexManager_removeModel(ANYCORE* anycore, const ModelID modelID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_VertexManager* vm = &anycore->vertexManager;
 
     if (modelID >= vm->modelCount) { return ANYCORE_ERR_INVALID_MODEL_ID; }

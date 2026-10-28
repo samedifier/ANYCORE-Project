@@ -26,8 +26,8 @@
 #include <string.h>
 
 ANYCORE_EXPORT ANYCORE_RESULT initANYCORE(ANYCORE** outanycore,
-    uint32_t chunkCountLimit, uint32_t modelChunkCountLimit, uint32_t startCapacity,
-    uint32_t loopCapacity, uint32_t moduleCapacity, uint32_t stride) {
+    uint32_t chunkCountLimit, uint32_t modelChunkCountLimit, uint16_t startCapacity,
+    uint16_t loopCapacity, uint16_t moduleCapacity, uint32_t stride) {
 
     uint32_t prec1 = sizeof(ANYCORE);
     

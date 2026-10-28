@@ -67,6 +67,14 @@
 #define ANYCORE_ENABLE_UPDATE_MODEL                      ON
 #define ANYCORE_ENABLE_REMOVE_MODEL                      ON
 
+#define ANYCORE_ENABLE_SET_TRANSFORM                     ON
+#define ANYCORE_ENABLE_ADD_TRANSFORM                     ON
+#define ANYCORE_ENABLE_GET_TRANSFORM                     ON
+
+#define ANYCORE_ENABLE_SET_TRANSFORM_BULK                ON
+#define ANYCORE_ENABLE_ADD_TRANSFORM_BULK                ON
+#define ANYCORE_ENABLE_GET_TRANSFORM_BULK                ON
+
 #define ANYCORE_ENABLE_SET_POSITION                      ON
 #define ANYCORE_ENABLE_SET_ROTATION                      ON
 #define ANYCORE_ENABLE_SET_SCALE                         ON
@@ -99,14 +107,6 @@
 #endif
 
 #define ANYCORE_EXPORT __attribute__((visibility("default")))
-
-static inline void ANYCORE_memset32(uint32_t* dst, size_t count) {
-    while (count--) { *dst++ = 0; }
-}
-
-static inline void ANYCORE_memset8(uint8_t* dst, size_t count) {
-    while (count--) { *dst++ = 0; }
-}
 
 #include <sys/mman.h>
 #define ANYCORE_mmap(size) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)

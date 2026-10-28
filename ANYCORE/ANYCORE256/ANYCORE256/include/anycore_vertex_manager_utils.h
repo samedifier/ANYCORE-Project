@@ -50,7 +50,7 @@ static inline ANYCORE_RESULT VertexManager_onInit(ANYCORE* anycore, uint32_t str
         return ANYCORE_ERR_ALLOC_FAILED;
     }
 
-    ANYCORE_memset8(mdcsflags, (ccl + 7) >> 3);
+    memset(mdcsflags, 0, (ccl + 7) >> 3);
 
     modelDirties->modelDirtyCount = 0;
 
@@ -214,14 +214,12 @@ static inline void markModelDirty(ANYCORE_VertexManager* vm, uint32_t page, uint
 
 static inline void clearModelDirtyFrame(ANYCORE_VertexManager* vm, uint32_t chunkCount) {
     ANYCORE_ModelDirtyChunk* mdc = vm->modelDirtyChunks;
-
+    uint32_t prec1 = 0x800 * sizeof(uint32_t);
     for (uint32_t page = 0; page < chunkCount; page++) {
-        ANYCORE_memset32(mdc[page].modelDirties, 0x800);
+        memset(mdc[page].modelDirties, 0, prec1);
         mdc[page].modelDirtyCount = 0;
     }
-
-    ANYCORE_memset8(vm->mdcsflags, (chunkCount + 7) >> 3);
-
+    memset(vm->mdcsflags, 0, (chunkCount + 7u) >> 3);
     vm->chunkModelDirtyCount = 0;
 }
 

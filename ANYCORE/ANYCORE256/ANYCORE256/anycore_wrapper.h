@@ -24,15 +24,19 @@
 
 #include <dlfcn.h>
 #define ANYCORE_DLOPEN(path)          dlopen((path), RTLD_NOW)
-#define ANYCORE_DLSYM(h, name, field) *(void**)(&(field)) = dlsym((h), (name))
-#define ANYCORE_DLCLOSE(handle)       dlclose(handle)
-    
+#define ANYCORE_DLSYM(h, name, field) ((*(void**)(&field) = dlsym((h), (name))) != NULL)
+#define ANYCORE_DLCLOSE(handle)       dlclose(handle)    
+
 #if PRESICION_ == PRESICION_FLOAT
     #define VEC2DTYPE Vec2f
     #define VEC3DTYPE Vec3f
+    #define TC2DTYPE  ANYCORE_Transform2Df
+    #define TC3DTYPE  ANYCORE_Transform3Df
 #elif PRESICION_ == PRESICION_DOUBLE
     #define VEC2DTYPE Vec2d
     #define VEC3DTYPE Vec3d
+    #define TC2DTYPE  ANYCORE_Transform2Dd
+    #define TC3DTYPE  ANYCORE_Transform3Dd
 #endif
 
 typedef struct ANYCORE ANYCORE;
@@ -187,169 +191,218 @@ typedef struct {
 #endif
 
 #if SPACE == SPACE_2D
-
-#if ANYCORE_ENABLE_SET_POSITION
-    /* Sets the position of an entity. */
-    ANYCORE_RESULT (*setPosition)(ANYCORE* anycore, EntityID entityID, const VEC2DTYPE newPosition);
+#if ANYCORE_ENABLE_SET_TRANSFORM
+    /* Sets the transform of an entity. */
+    uint32_t (*setTransform) (ANYCORE* anycore, EntityID entityID, const TC2DTYPE transform);
 #endif
-#if ANYCORE_ENABLE_SET_ROTATION
-    /* Sets the rotation of an entity. */
-    ANYCORE_RESULT (*setRotation)(ANYCORE* anycore, EntityID entityID, const PRESICION newRotation);
+    /* Adds a value to the transform of an entity. */
+#if ANYCORE_ENABLE_ADD_TRANSFORM
+    uint32_t (*addTransform) (ANYCORE* anycore, EntityID entityID, const TC2DTYPE transform);
 #endif
-#if ANYCORE_ENABLE_SET_SCALE
-    /* Sets the scale of an entity. */
-    ANYCORE_RESULT (*setScale)   (ANYCORE* anycore, EntityID entityID, const VEC2DTYPE newScale);
+#if ANYCORE_ENABLE_GET_TRANSFORM
+    /* Gets the transform of an entity. */    
+    uint32_t (*getTransform) (ANYCORE* anycore, EntityID entityID, TC2DTYPE* outTransform);
 #endif
-#if ANYCORE_ENABLE_GET_POSITION
-    /* Gets the position of an entity. */
-    ANYCORE_RESULT (*getPosition)(ANYCORE* anycore, EntityID entityID, VEC2DTYPE* outPosition);
+#if ANYCORE_ENABLE_SET_TRANSFORM_BULK
+    /* Sets the transforms of multiple entities in a single operation. */
+    uint32_t (*setTransformBulk) (ANYCORE* anycore, EntityID* entityIDs, const TC2DTYPE* transforms, const uint32_t count);
 #endif
-#if ANYCORE_ENABLE_GET_ROTATION
-    /* Gets the rotation of an entity. */
-    ANYCORE_RESULT (*getRotation)(ANYCORE* anycore, EntityID entityID, PRESICION* outRotation);
+#if ANYCORE_ENABLE_ADD_TRANSFORM_BULK
+    /* Adds values to the transforms of multiple entities in a single operation. */
+    uint32_t (*addTransformBulk) (ANYCORE* anycore, EntityID* entityIDs, const TC2DTYPE* transforms, const uint32_t count);
 #endif
-#if ANYCORE_ENABLE_GET_SCALE
-    /* Gets the scale of an entity. */
-    ANYCORE_RESULT (*getScale)   (ANYCORE* anycore, EntityID entityID, VEC2DTYPE* outScale);
+#if ANYCORE_ENABLE_GET_TRANSFORM_BULK
+    /* Gets the transforms of multiple entities in a single operation. */
+    uint32_t (*getTransformBulk) (ANYCORE* anycore, EntityID* entityIDs, TC2DTYPE* outTransforms, const uint32_t count);
 #endif
-#if ANYCORE_ENABLE_ADD_POSITION
-    /* Adds a value to the position of an entity. */
-    ANYCORE_RESULT (*addPosition)(ANYCORE* anycore, EntityID entityID, const VEC2DTYPE value);
-#endif
-#if ANYCORE_ENABLE_ADD_ROTATION
-    /* Adds a value to the rotation of an entity. */
-    ANYCORE_RESULT (*addRotation)(ANYCORE* anycore, EntityID entityID, const PRESICION value);
-#endif
-#if ANYCORE_ENABLE_ADD_SCALE
-    /* Adds a value to the scale of an entity. */
-    ANYCORE_RESULT (*addScale)   (ANYCORE* anycore, EntityID entityID, const VEC2DTYPE value);
-#endif
-
-#if ANYCORE_ENABLE_SET_POSITION_BULK
-    /* Sets the positions of multiple entities in a single operation. */
-    uint32_t (*setPositionBulk)(ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* newPositions, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_SET_ROTATION_BULK
-    /* Sets the rotations of multiple entities in a single operation. */
-    uint32_t (*setRotationBulk)(ANYCORE* anycore, EntityID* entityIDs, const PRESICION* newRotations, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_SET_SCALE_BULK
-    /* Sets the scales of multiple entities in a single operation. */
-    uint32_t (*setScaleBulk)   (ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* newScales, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_GET_POSITION_BULK
-    /* Gets the positions of multiple entities in a single operation. */
-    uint32_t (*getPositionBulk)(ANYCORE* anycore, EntityID* entityIDs, VEC2DTYPE* outPositions, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_GET_ROTATION_BULK
-    /* Gets the rotations of multiple entities in a single operation. */
-    uint32_t (*getRotationBulk)(ANYCORE* anycore, EntityID* entityIDs, PRESICION* outRotations, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_GET_SCALE_BULK
-    /* Gets the scales of multiple entities in a single operation. */
-    uint32_t (*getScaleBulk)   (ANYCORE* anycore, EntityID* entityIDs, VEC2DTYPE* outScales, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_ADD_POSITION_BULK
-    /* Adds values to the positions of multiple entities in a single operation. */
-    uint32_t (*addPositionBulk)(ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* values, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_ADD_ROTATION_BULK
-    /* Adds values to the rotations of multiple entities in a single operation. */
-    uint32_t (*addRotationBulk)(ANYCORE* anycore, EntityID* entityIDs, const PRESICION* values, const uint32_t count);
-#endif
-#if ANYCORE_ENABLE_ADD_SCALE_BULK
-    /* Adds values to the scales of multiple entities in a single operation. */
-    uint32_t (*addScaleBulk)   (ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* values, const uint32_t count);
-#endif
-
 #elif SPACE == SPACE_3D
+#if ANYCORE_ENABLE_SET_TRANSFORM
+    /* Sets the transform of an entity. */
+    uint32_t (*setTransform) (ANYCORE* anycore, EntityID entityID, const TC3DTYPE transform);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM
+    /* Adds a value to the transform of an entity. */
+    uint32_t (*addTransform) (ANYCORE* anycore, EntityID entityID, const TC3DTYPE transform);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM
+    /* Gets the transform of an entity. */    
+    uint32_t (*getTransform) (ANYCORE* anycore, EntityID entityID, TC3DTYPE* outTransform);
+#endif
+#if ANYCORE_ENABLE_SET_TRANSFORM_BULK
+    /* Sets the transforms of multiple entities in a single operation. */
+    uint32_t (*setTransformBulk) (ANYCORE* anycore, EntityID* entityIDs, const TC3DTYPE* transforms, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM_BULK
+    /* Adds values to the positions of multiple entities in a single operation. */
+    uint32_t (*addTransformBulk) (ANYCORE* anycore, EntityID* entityIDs, const TC3DTYPE* transforms, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM_BULK
+    /* Gets the transforms of multiple entities in a single operation. */
+    uint32_t (*getTransformBulk) (ANYCORE* anycore, EntityID* entityIDs, TC3DTYPE* outTransforms, const uint32_t count);
+#endif
+#endif
 
+#if SPACE == SPACE_2D
 #if ANYCORE_ENABLE_SET_POSITION
     /* Sets the position of an entity. */
-    ANYCORE_RESULT (*setPosition)(ANYCORE* anycore, EntityID entityID, const VEC3DTYPE newPosition);
+    ANYCORE_RESULT (*setPosition) (ANYCORE* anycore, EntityID entityID, const VEC2DTYPE newPosition);
 #endif
 #if ANYCORE_ENABLE_SET_ROTATION
     /* Sets the rotation of an entity. */
-    ANYCORE_RESULT (*setRotation)(ANYCORE* anycore, EntityID entityID, const VEC3DTYPE newRotation);
+    ANYCORE_RESULT (*setRotation) (ANYCORE* anycore, EntityID entityID, const PRESICION newRotation);
 #endif
 #if ANYCORE_ENABLE_SET_SCALE
     /* Sets the scale of an entity. */
-    ANYCORE_RESULT (*setScale)   (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE newScale);
+    ANYCORE_RESULT (*setScale)    (ANYCORE* anycore, EntityID entityID, const VEC2DTYPE newScale);
 #endif
 #if ANYCORE_ENABLE_GET_POSITION
     /* Gets the position of an entity. */
-    ANYCORE_RESULT (*getPosition)(ANYCORE* anycore, EntityID entityID, VEC3DTYPE* outPosition);
+    ANYCORE_RESULT (*getPosition) (ANYCORE* anycore, EntityID entityID, VEC2DTYPE* outPosition);
 #endif
 #if ANYCORE_ENABLE_GET_ROTATION
     /* Gets the rotation of an entity. */
-    ANYCORE_RESULT (*getRotation)(ANYCORE* anycore, EntityID entityID, VEC3DTYPE* outRotation);
+    ANYCORE_RESULT (*getRotation) (ANYCORE* anycore, EntityID entityID, PRESICION* outRotation);
 #endif
 #if ANYCORE_ENABLE_GET_SCALE
     /* Gets the scale of an entity. */
-    ANYCORE_RESULT (*getScale)   (ANYCORE* anycore, EntityID entityID, VEC3DTYPE* outScale);
+    ANYCORE_RESULT (*getScale)    (ANYCORE* anycore, EntityID entityID, VEC2DTYPE* outScale);
 #endif
 #if ANYCORE_ENABLE_ADD_POSITION
     /* Adds a value to the position of an entity. */
-    ANYCORE_RESULT (*addPosition)(ANYCORE* anycore, EntityID entityID, const VEC3DTYPE value);
+    ANYCORE_RESULT (*addPosition) (ANYCORE* anycore, EntityID entityID, const VEC2DTYPE value);
 #endif
 #if ANYCORE_ENABLE_ADD_ROTATION
     /* Adds a value to the rotation of an entity. */
-    ANYCORE_RESULT (*addRotation)(ANYCORE* anycore, EntityID entityID, const VEC3DTYPE value);
+    ANYCORE_RESULT (*addRotation) (ANYCORE* anycore, EntityID entityID, const PRESICION value);
 #endif
 #if ANYCORE_ENABLE_ADD_SCALE
     /* Adds a value to the scale of an entity. */
-    ANYCORE_RESULT (*addScale)   (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE value);
+    ANYCORE_RESULT (*addScale)    (ANYCORE* anycore, EntityID entityID, const VEC2DTYPE value);
 #endif
 
 #if ANYCORE_ENABLE_SET_POSITION_BULK
     /* Sets the positions of multiple entities in a single operation. */
-    uint32_t (*setPositionBulk)(ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* newPositions, const uint32_t count);
+    uint32_t (*setPositionBulk) (ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* newPositions, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_SET_ROTATION_BULK
     /* Sets the rotations of multiple entities in a single operation. */
-    uint32_t (*setRotationBulk)(ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* newRotations, const uint32_t count);
+    uint32_t (*setRotationBulk) (ANYCORE* anycore, EntityID* entityIDs, const PRESICION* newRotations, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_SET_SCALE_BULK
     /* Sets the scales of multiple entities in a single operation. */
-    uint32_t (*setScaleBulk)   (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* newScales, const uint32_t count);
+    uint32_t (*setScaleBulk)    (ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* newScales, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_GET_POSITION_BULK
     /* Gets the positions of multiple entities in a single operation. */
-    uint32_t (*getPositionBulk)(ANYCORE* anycore, EntityID* entityIDs, VEC3DTYPE* outPositions, const uint32_t count);
+    uint32_t (*getPositionBulk) (ANYCORE* anycore, EntityID* entityIDs, VEC2DTYPE* outPositions, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_GET_ROTATION_BULK
     /* Gets the rotations of multiple entities in a single operation. */
-    uint32_t (*getRotationBulk)(ANYCORE* anycore, EntityID* entityIDs, VEC3DTYPE* outRotations, const uint32_t count);
+    uint32_t (*getRotationBulk) (ANYCORE* anycore, EntityID* entityIDs, PRESICION* outRotations, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_GET_SCALE_BULK
     /* Gets the scales of multiple entities in a single operation. */
-    uint32_t (*getScaleBulk)   (ANYCORE* anycore, EntityID* entityIDs, VEC3DTYPE* outScales, const uint32_t count);
+    uint32_t (*getScaleBulk)    (ANYCORE* anycore, EntityID* entityIDs, VEC2DTYPE* outScales, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_ADD_POSITION_BULK
     /* Adds values to the positions of multiple entities in a single operation. */
-    uint32_t (*addPositionBulk)(ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* values, const uint32_t count);
+    uint32_t (*addPositionBulk) (ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* values, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_ADD_ROTATION_BULK
     /* Adds values to the rotations of multiple entities in a single operation. */
-    uint32_t (*addRotationBulk)(ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* values, const uint32_t count);
+    uint32_t (*addRotationBulk) (ANYCORE* anycore, EntityID* entityIDs, const PRESICION* values, const uint32_t count);
 #endif
 #if ANYCORE_ENABLE_ADD_SCALE_BULK
     /* Adds values to the scales of multiple entities in a single operation. */
-    uint32_t (*addScaleBulk)   (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* values, const uint32_t count);
+    uint32_t (*addScaleBulk)    (ANYCORE* anycore, EntityID* entityIDs, const VEC2DTYPE* values, const uint32_t count);
+#endif
+#elif SPACE == SPACE_3D
+#if ANYCORE_ENABLE_SET_POSITION
+    /* Sets the position of an entity. */
+    ANYCORE_RESULT (*setPosition) (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE newPosition);
+#endif
+#if ANYCORE_ENABLE_SET_ROTATION
+    /* Sets the rotation of an entity. */
+    ANYCORE_RESULT (*setRotation) (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE newRotation);
+#endif
+#if ANYCORE_ENABLE_SET_SCALE
+    /* Sets the scale of an entity. */
+    ANYCORE_RESULT (*setScale)    (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE newScale);
+#endif
+#if ANYCORE_ENABLE_GET_POSITION
+    /* Gets the position of an entity. */
+    ANYCORE_RESULT (*getPosition) (ANYCORE* anycore, EntityID entityID, VEC3DTYPE* outPosition);
+#endif
+#if ANYCORE_ENABLE_GET_ROTATION
+    /* Gets the rotation of an entity. */
+    ANYCORE_RESULT (*getRotation) (ANYCORE* anycore, EntityID entityID, VEC3DTYPE* outRotation);
+#endif
+#if ANYCORE_ENABLE_GET_SCALE
+    /* Gets the scale of an entity. */
+    ANYCORE_RESULT (*getScale)    (ANYCORE* anycore, EntityID entityID, VEC3DTYPE* outScale);
+#endif
+#if ANYCORE_ENABLE_ADD_POSITION
+    /* Adds a value to the position of an entity. */
+    ANYCORE_RESULT (*addPosition) (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE value);
+#endif
+#if ANYCORE_ENABLE_ADD_ROTATION
+    /* Adds a value to the rotation of an entity. */
+    ANYCORE_RESULT (*addRotation) (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE value);
+#endif
+#if ANYCORE_ENABLE_ADD_SCALE
+    /* Adds a value to the scale of an entity. */
+    ANYCORE_RESULT (*addScale)    (ANYCORE* anycore, EntityID entityID, const VEC3DTYPE value);
+#endif
+
+#if ANYCORE_ENABLE_SET_POSITION_BULK
+    /* Sets the positions of multiple entities in a single operation. */
+    uint32_t (*setPositionBulk) (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* newPositions, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_SET_ROTATION_BULK
+    /* Sets the rotations of multiple entities in a single operation. */
+    uint32_t (*setRotationBulk) (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* newRotations, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_SET_SCALE_BULK
+    /* Sets the scales of multiple entities in a single operation. */
+    uint32_t (*setScaleBulk)    (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* newScales, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_GET_POSITION_BULK
+    /* Gets the positions of multiple entities in a single operation. */
+    uint32_t (*getPositionBulk) (ANYCORE* anycore, EntityID* entityIDs, VEC3DTYPE* outPositions, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_GET_ROTATION_BULK
+    /* Gets the rotations of multiple entities in a single operation. */
+    uint32_t (*getRotationBulk) (ANYCORE* anycore, EntityID* entityIDs, VEC3DTYPE* outRotations, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_GET_SCALE_BULK
+    /* Gets the scales of multiple entities in a single operation. */
+    uint32_t (*getScaleBulk)    (ANYCORE* anycore, EntityID* entityIDs, VEC3DTYPE* outScales, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_ADD_POSITION_BULK
+    /* Adds values to the positions of multiple entities in a single operation. */
+    uint32_t (*addPositionBulk) (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* values, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_ADD_ROTATION_BULK
+    /* Adds values to the rotations of multiple entities in a single operation. */
+    uint32_t (*addRotationBulk) (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* values, const uint32_t count);
+#endif
+#if ANYCORE_ENABLE_ADD_SCALE_BULK
+    /* Adds values to the scales of multiple entities in a single operation. */
+    uint32_t (*addScaleBulk)    (ANYCORE* anycore, EntityID* entityIDs, const VEC3DTYPE* values, const uint32_t count);
 #endif
 #endif
 } ANYCORE_Wrapper;
 
 static inline bool ANYCORE_load(ANYCORE_Instance* out, const char* path,
-    uint32_t chunkCountLimit, uint32_t modelChunkCountLimit, uint32_t startCapacity,
-    uint32_t loopCapacity, uint32_t moduleCapacity, uint32_t stride) {
+    uint32_t chunkCountLimit, uint32_t modelChunkCountLimit, uint16_t startCapacity,
+    uint16_t loopCapacity, uint16_t moduleCapacity, uint32_t stride) {
     if (!out || !path) { return false; }
 
     out->libHandle = ANYCORE_DLOPEN(path);
     if (!out->libHandle) return false;
 
-    ANYCORE_RESULT (*init)(ANYCORE**, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) = NULL;
-    ANYCORE_DLSYM(out->libHandle, "initANYCORE", init);
+    ANYCORE_RESULT (*init)(ANYCORE**, uint32_t, uint32_t, uint16_t, uint16_t, uint16_t, uint32_t) = NULL;
+    *(void**)(&init) = dlsym(out->libHandle, "initANYCORE");
     if (!init) { ANYCORE_DLCLOSE(out->libHandle); return false; }
 
     ANYCORE_RESULT r = init(&out->core, chunkCountLimit, modelChunkCountLimit, startCapacity, loopCapacity, moduleCapacity, stride);
@@ -371,170 +424,193 @@ static inline void ANYCORE_unload(ANYCORE_Instance* inst) {
 static inline bool ANYCORE_Wrapper_init(ANYCORE_Wrapper* w, void* libHandle) {
     if (!w || !libHandle) { return false; }
 
+    *w = (ANYCORE_Wrapper){0};
+    bool result = true;
+
 #if ANYCORE_ENABLE_GET_BUILD_ID
-    ANYCORE_DLSYM(libHandle, "getANYCOREBuildID", w->getBuildID);
+    result &= ANYCORE_DLSYM(libHandle, "getANYCOREBuildID", w->getBuildID);
 #endif
 
 #if ANYCORE_ENABLE_LOAD_MODULE
-    ANYCORE_DLSYM(libHandle, "ANYCORE_loadModule",      w->loadModule);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_loadModule", w->loadModule);
 #endif
 #if ANYCORE_ENABLE_LOAD_BEHAVIOUR
-    ANYCORE_DLSYM(libHandle, "ANYCORE_loadBehaviour",   w->loadBehaviour);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_loadBehaviour", w->loadBehaviour);
 #endif
 #if ANYCORE_ENABLE_UNLOAD_BEHAVIOUR
-    ANYCORE_DLSYM(libHandle, "ANYCORE_unloadBehaviour", w->unloadBehaviour);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_unloadBehaviour", w->unloadBehaviour);
 #endif
 #if ANYCORE_ENABLE_IMPORT_FUNCTION
-    ANYCORE_DLSYM(libHandle, "ANYCORE_importFunction",  w->importFunction);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_importFunction", w->importFunction);
 #endif
-    ANYCORE_DLSYM(libHandle, "ANYCORE_pushStart",       w->pushStart);
-    ANYCORE_DLSYM(libHandle, "ANYCORE_pushLoop",        w->pushLoop);
-    ANYCORE_DLSYM(libHandle, "ANYCORE_run",             w->run);
+
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_pushStart", w->pushStart);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_pushLoop", w->pushLoop);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_run", w->run);
+
 #if ANYCORE_ENABLE_KILL_MODULE
-    ANYCORE_DLSYM(libHandle, "ANYCORE_killModule",      w->killModule);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_killModule", w->killModule);
 #endif
-    ANYCORE_DLSYM(libHandle, "ANYCORE_shutdown",        w->ANYCOREshutdown);
+
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_shutdown", w->ANYCOREshutdown);
 
 #if ANYCORE_ENABLE_NEXT_ENTITY_ID
-    ANYCORE_DLSYM(libHandle, "ANYCORE_nextEntityID",            w->nextEntityID);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_nextEntityID", w->nextEntityID);
 #endif
-
 #if ANYCORE_ENABLE_IS_ENTITY_ALIVE
-    ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityAlive",           w->isEntityAlive);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityAlive", w->isEntityAlive);
 #endif
-
 #if ANYCORE_ENABLE_IS_ENTITY_LOCKED
-    ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityLocked",          w->isEntityLocked);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityLocked", w->isEntityLocked);
 #endif
 #if ANYCORE_ENABLE_CREATE_ENTITY
-    ANYCORE_DLSYM(libHandle, "ANYCORE_createEntity",            w->createEntity);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_createEntity", w->createEntity);
 #endif
 #if ANYCORE_ENABLE_RESTORE_ENTITY
-    ANYCORE_DLSYM(libHandle, "ANYCORE_restoreEntity",           w->restoreEntity);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_restoreEntity", w->restoreEntity);
 #endif
 #if ANYCORE_ENABLE_DESTROY_ENTITY
-    ANYCORE_DLSYM(libHandle, "ANYCORE_destroyEntity",           w->destroyEntity);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_destroyEntity", w->destroyEntity);
 #endif
 #if ANYCORE_ENABLE_LOCK_ENTITY
-    ANYCORE_DLSYM(libHandle, "ANYCORE_lockEntity",              w->lockEntity);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_lockEntity", w->lockEntity);
 #endif
 #if ANYCORE_ENABLE_UNLOCK_ENTITY
-    ANYCORE_DLSYM(libHandle, "ANYCORE_unlockEntity",            w->unlockEntity);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_unlockEntity", w->unlockEntity);
 #endif
 #if ANYCORE_ENABLE_GET_ACTIVE_CHUNK_COUNT
-    ANYCORE_DLSYM(libHandle, "ANYCORE_getActiveChunkCount",     w->getActiveChunkCount);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_getActiveChunkCount", w->getActiveChunkCount);
 #endif
 #if ANYCORE_ENABLE_GET_LAST_CHUNK_VALID_ENTITY_COUNT
-    ANYCORE_DLSYM(libHandle, "ANYCORE_getLastChunkValidEntityCount", w->getLastChunkValidEntityCount);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_getLastChunkValidEntityCount", w->getLastChunkValidEntityCount);
 #endif
 #if ANYCORE_ENABLE_FREE_LAST_CHUNK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_freeLastChunk",           w->freeLastChunk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_freeLastChunk", w->freeLastChunk);
 #endif
 #if ANYCORE_ENABLE_ALLOC_NEW_CHUNK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_allocNewChunk",           w->allocNewChunk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_allocNewChunk", w->allocNewChunk);
 #endif
 
 #if ANYCORE_ENABLE_CREATE_ENTITY_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_createEntityBulk",        w->createEntityBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_createEntityBulk", w->createEntityBulk);
 #endif
 #if ANYCORE_ENABLE_RESTORE_ENTITY_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_restoreEntityBulk",       w->restoreEntityBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_restoreEntityBulk", w->restoreEntityBulk);
 #endif
 #if ANYCORE_ENABLE_DESTROY_ENTITY_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_destroyEntityBulk",       w->destroyEntityBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_destroyEntityBulk", w->destroyEntityBulk);
 #endif
 #if ANYCORE_ENABLE_LOCK_ENTITY_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_lockEntityBulk",          w->lockEntityBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_lockEntityBulk", w->lockEntityBulk);
 #endif
 #if ANYCORE_ENABLE_UNLOCK_ENTITY_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_unlockEntityBulk",        w->unlockEntityBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_unlockEntityBulk", w->unlockEntityBulk);
 #endif
 
 #if ANYCORE_ENABLE_DESTROY_ALL_ENTITIES
-    ANYCORE_DLSYM(libHandle, "ANYCORE_destroyAllEntities",      w->destroyAllEntities);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_destroyAllEntities", w->destroyAllEntities);
 #endif
 #if ANYCORE_ENABLE_LOCK_ALL_ENTITIES
-    ANYCORE_DLSYM(libHandle, "ANYCORE_lockAllEntities",         w->lockAllEntities);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_lockAllEntities", w->lockAllEntities);
 #endif
 #if ANYCORE_ENABLE_UNLOCK_ALL_ENTITIES
-    ANYCORE_DLSYM(libHandle, "ANYCORE_unlockAllEntities",       w->unlockAllEntities);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_unlockAllEntities", w->unlockAllEntities);
 #endif
 
 #if ANYCORE_ENABLE_ADD_MODEL
-    ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_addModel",    w->addModel);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_addModel", w->addModel);
 #endif
 #if ANYCORE_ENABLE_SET_MODEL
-    ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_setModel",    w->setModel);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_setModel", w->setModel);
 #endif
 #if ANYCORE_ENABLE_UPDATE_MODEL
-    ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_updateModel", w->updateModel);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_updateModel", w->updateModel);
 #endif
 #if ANYCORE_ENABLE_REMOVE_MODEL
-    ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_removeModel", w->removeModel);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_VertexManager_removeModel", w->removeModel);
+#endif
+
+#if ANYCORE_ENABLE_SET_TRANSFORM
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setTransform", w->setTransform);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addTransform", w->addTransform);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getTransform", w->getTransform);
+#endif
+#if ANYCORE_ENABLE_SET_TRANSFORM_BULK
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setTransformBulk", w->setTransformBulk);
+#endif
+#if ANYCORE_ENABLE_ADD_TRANSFORM_BULK
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addTransformBulk", w->addTransformBulk);
+#endif
+#if ANYCORE_ENABLE_GET_TRANSFORM_BULK
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getTransformBulk", w->getTransformBulk);
 #endif
 
 #if ANYCORE_ENABLE_SET_POSITION
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setPosition", w->setPosition);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setPosition", w->setPosition);
 #endif
 #if ANYCORE_ENABLE_SET_ROTATION
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setRotation", w->setRotation);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setRotation", w->setRotation);
 #endif
 #if ANYCORE_ENABLE_SET_SCALE
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setScale",    w->setScale);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setScale", w->setScale);
 #endif
 #if ANYCORE_ENABLE_GET_POSITION
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getPosition", w->getPosition);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getPosition", w->getPosition);
 #endif
 #if ANYCORE_ENABLE_GET_ROTATION
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getRotation", w->getRotation);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getRotation", w->getRotation);
 #endif
 #if ANYCORE_ENABLE_GET_SCALE
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getScale",    w->getScale);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getScale", w->getScale);
 #endif
 #if ANYCORE_ENABLE_ADD_POSITION
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addPosition", w->addPosition);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addPosition", w->addPosition);
 #endif
 #if ANYCORE_ENABLE_ADD_ROTATION
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addRotation", w->addRotation);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addRotation", w->addRotation);
 #endif
 #if ANYCORE_ENABLE_ADD_SCALE
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addScale",    w->addScale);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addScale", w->addScale);
 #endif
 
 #if ANYCORE_ENABLE_SET_POSITION_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setPositionBulk", w->setPositionBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setPositionBulk", w->setPositionBulk);
 #endif
 #if ANYCORE_ENABLE_SET_ROTATION_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setRotationBulk", w->setRotationBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setRotationBulk", w->setRotationBulk);
 #endif
 #if ANYCORE_ENABLE_SET_SCALE_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setScaleBulk",    w->setScaleBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_setScaleBulk", w->setScaleBulk);
 #endif
 #if ANYCORE_ENABLE_GET_POSITION_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getPositionBulk", w->getPositionBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getPositionBulk", w->getPositionBulk);
 #endif
 #if ANYCORE_ENABLE_GET_ROTATION_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getRotationBulk", w->getRotationBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getRotationBulk", w->getRotationBulk);
 #endif
 #if ANYCORE_ENABLE_GET_SCALE_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getScaleBulk",    w->getScaleBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_getScaleBulk", w->getScaleBulk);
 #endif
 #if ANYCORE_ENABLE_ADD_POSITION_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addPositionBulk", w->addPositionBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addPositionBulk", w->addPositionBulk);
 #endif
 #if ANYCORE_ENABLE_ADD_ROTATION_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addRotationBulk", w->addRotationBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addRotationBulk", w->addRotationBulk);
 #endif
 #if ANYCORE_ENABLE_ADD_SCALE_BULK
-    ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addScaleBulk",    w->addScaleBulk);
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_Transform_addScaleBulk", w->addScaleBulk);
 #endif
 
-    return true;
+    return result;
 }
 
 static inline void ANYCORE_injectWrapper(ANYCORE_Wrapper* w, Behaviour bh) {
-    void (*injectANYCOREWrapper)(void*) = NULL;
-    ANYCORE_DLSYM(bh, "injectANYCOREWrapper", injectANYCOREWrapper);
+    void (*injectANYCOREWrapper) (void*) = NULL;
+    *(void**)(&injectANYCOREWrapper) = dlsym(bh, "injectANYCOREWrapper");
     if (injectANYCOREWrapper) { injectANYCOREWrapper(w); }
 }
 

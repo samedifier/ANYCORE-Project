@@ -18,6 +18,8 @@
 
 #if ANYCORE_ENABLE_NEXT_ENTITY_ID
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_nextEntityID(ANYCORE* anycore, EntityID* nextEntityID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (nextEntityID == NULL) { return ANYCORE_ERR_NULL_POINTER; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t ufscsize = sm->ufscsize;
@@ -28,19 +30,19 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_nextEntityID(ANYCORE* anycore, EntityID* n
 
     uint32_t idx  = sm->fssize[chunk] - 1;
     uint32_t slot = sc->freeSlots[idx];
+    
+    *nextEntityID = (EntityID){
+        .slot       = (chunk << CHUNKSHIFT) | slot,
+        .generation = sc->generations[slot] + 1
+    };
 
-    if (nextEntityID) {
-        *nextEntityID = (EntityID){
-            .slot       = (chunk << CHUNKSHIFT) | slot,
-            .generation = sc->generations[slot] + 1
-        };
-    }
     return ANYCORE_SUCCESS;
 }
 #endif
 
 #if ANYCORE_ENABLE_IS_ENTITY_ALIVE
 ANYCORE_EXPORT bool ANYCORE_isEntityAlive(ANYCORE* anycore, const EntityID entityID) {
+    if (anycore == NULL) { return false; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t page = entityID.slot >> CHUNKSHIFT;
@@ -56,11 +58,11 @@ ANYCORE_EXPORT bool ANYCORE_isEntityAlive(ANYCORE* anycore, const EntityID entit
 
 #if ANYCORE_ENABLE_IS_ENTITY_LOCKED
 ANYCORE_EXPORT bool ANYCORE_isEntityLocked(ANYCORE* anycore, const EntityID entityID) {
+    if (anycore == NULL) { return false; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t page = entityID.slot >> CHUNKSHIFT;
     if (page >= sm->chunkcount) { return false; }
-
     uint32_t slot = entityID.slot & CHUNKMASK;
     
     return (sm->sceneChunks[page].lockFlags[slot >> 5] & (1u << (slot & 31)));
@@ -69,7 +71,7 @@ ANYCORE_EXPORT bool ANYCORE_isEntityLocked(ANYCORE* anycore, const EntityID enti
 
 #if ANYCORE_ENABLE_ALLOC_NEW_CHUNK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
 
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
     if (sm->chunkcount >= sm->chunkCountLimit) { return ANYCORE_ERR_CHUNK_LIMIT; }
@@ -84,8 +86,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
     uint32_t* vf  = ANYCORE_mmap(prec2);
     uint32_t* lf  = ANYCORE_mmap(prec2);
 
-    if (gen == ANYCORE_MAP_FAILED || fs  == ANYCORE_MAP_FAILED || vf  == ANYCORE_MAP_FAILED || lf  == ANYCORE_MAP_FAILED) {
-
+    if (gen == ANYCORE_MAP_FAILED || fs == ANYCORE_MAP_FAILED || vf == ANYCORE_MAP_FAILED || lf == ANYCORE_MAP_FAILED) {
         if (gen != ANYCORE_MAP_FAILED) { ANYCORE_munmap(gen, prec1); }
         if (fs != ANYCORE_MAP_FAILED)  { ANYCORE_munmap(fs,  prec1); }
         if (vf != ANYCORE_MAP_FAILED)  { ANYCORE_munmap(vf,  prec2); }
@@ -94,7 +95,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
         return ANYCORE_ERR_ALLOC_FAILED;
     }
 
-    for (uint32_t j = 0; j < CHUNKSIZE; ++j) { fs[j]  = (uint16_t)j; gen[j] = 0; }
+    for (uint32_t j = 0; j < CHUNKSIZE; ++j) { fs[j] = (uint16_t)j; gen[j] = 0; }
 
     ANYCORE_RESULT vmresult = VertexManager_onGrow(anycore, chunk);
     ANYCORE_RESULT tmresult = TransformManager_onGrow(anycore, chunk);
@@ -104,7 +105,6 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
         ANYCORE_munmap(fs,  prec1);
         ANYCORE_munmap(vf,  prec2);
         ANYCORE_munmap(lf,  prec2);
-
         return ANYCORE_ERR_ALLOC_FAILED;
     }
 
@@ -119,7 +119,6 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
     sm->isusable[chunk] = 1;
 
     sm->usablefsc[sm->ufscsize++] = chunk;
-
     sm->chunkcount++;
 
     return ANYCORE_SUCCESS;
@@ -128,7 +127,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
 
 #if ANYCORE_ENABLE_FREE_LAST_CHUNK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
 
     ANYCORE_SceneManager*     sm  = &anycore->sceneManager;
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
@@ -212,7 +211,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
 
 #if ANYCORE_ENABLE_CREATE_ENTITY
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(ANYCORE* anycore, const ModelID modelID, EntityID* outEntityID) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
 
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
     ANYCORE_TransformManager* ttm = &anycore->transformManager;
@@ -295,6 +294,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntity(ANYCORE* anycore, const Model
 
 #if ANYCORE_ENABLE_RESTORE_ENTITY
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntity(ANYCORE* anycore, EntityID* outEntityID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t ufscsize = sm->ufscsize;
@@ -335,6 +335,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntity(ANYCORE* anycore, EntityID* 
 
 #if ANYCORE_ENABLE_DESTROY_ENTITY
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_destroyEntity(ANYCORE* anycore, const EntityID entityID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t chunk    = entityID.slot >> CHUNKSHIFT;
@@ -372,6 +373,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_destroyEntity(ANYCORE* anycore, const Enti
 
 #if ANYCORE_ENABLE_LOCK_ENTITY
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_lockEntity(ANYCORE* anycore, const EntityID entityID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t chunk    = entityID.slot >> CHUNKSHIFT;
@@ -392,6 +394,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_lockEntity(ANYCORE* anycore, const EntityI
 
 #if ANYCORE_ENABLE_UNLOCK_ENTITY
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_unlockEntity(ANYCORE* anycore, const EntityID entityID) {
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
     uint32_t chunk    = entityID.slot >> CHUNKSHIFT;
@@ -412,7 +415,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_unlockEntity(ANYCORE* anycore, const Entit
 
 #if ANYCORE_ENABLE_CREATE_ENTITY_BULK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const ModelID modelID, EntityID* outEntityIDs, uint32_t count) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     if (count == 0) { return ANYCORE_SUCCESS; }
 
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
@@ -534,7 +537,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_createEntityBulk(ANYCORE* anycore, const M
 
 #if ANYCORE_ENABLE_RESTORE_ENTITY_BULK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntityBulk(ANYCORE* anycore, EntityID* outEntityIDs, uint32_t count) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
     if (count == 0) { return ANYCORE_SUCCESS; }
 
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
@@ -590,8 +593,9 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_restoreEntityBulk(ANYCORE* anycore, Entity
 
 #if ANYCORE_ENABLE_DESTROY_ENTITY_BULK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_destroyEntityBulk(ANYCORE* anycore, EntityID* entityIDs, uint32_t count) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
-    if (!entityIDs) { return ANYCORE_ERR_NULL_POINTER; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (entityIDs == NULL) { return ANYCORE_ERR_NULL_POINTER; }
+    if (count == 0) { return ANYCORE_SUCCESS; }
 
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
     ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
@@ -639,8 +643,9 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_destroyEntityBulk(ANYCORE* anycore, Entity
 
 #if ANYCORE_ENABLE_LOCK_ENTITY_BULK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_lockEntityBulk(ANYCORE* anycore, EntityID* entityIDs, uint32_t count) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
-    if (!entityIDs) { return ANYCORE_ERR_NULL_POINTER; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (entityIDs == NULL) { return ANYCORE_ERR_NULL_POINTER; }
+    if (count == 0) { return ANYCORE_SUCCESS; }
     
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
@@ -656,7 +661,6 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_lockEntityBulk(ANYCORE* anycore, EntityID*
         uint32_t mask     = 1u << (slot & 31);
 
         if (!((sc->validFlags[wordindx] & mask) && (sc->generations[slot] == eid.generation))) { goto skip; }
-
         sc->lockFlags[wordindx] |= mask;
 
         skip:        
@@ -667,8 +671,9 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_lockEntityBulk(ANYCORE* anycore, EntityID*
 
 #if ANYCORE_ENABLE_UNLOCK_ENTITY_BULK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_unlockEntityBulk(ANYCORE* anycore, EntityID* entityIDs, uint32_t count) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
-    if (!entityIDs) { return ANYCORE_ERR_NULL_POINTER; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (entityIDs == NULL) { return ANYCORE_ERR_NULL_POINTER; }
+    if (count == 0) { return ANYCORE_SUCCESS; }
     
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
 
@@ -684,7 +689,6 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_unlockEntityBulk(ANYCORE* anycore, EntityI
         uint32_t mask     = 1u << (slot & 31);
 
         if (!((sc->validFlags[wordindx] & mask) && (sc->generations[slot] == eid.generation))) { goto skip; }
-
         sc->lockFlags[wordindx] &= ~mask;
         
         skip:        
@@ -695,7 +699,7 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_unlockEntityBulk(ANYCORE* anycore, EntityI
 
 #if ANYCORE_ENABLE_DESTROY_ALL_ENTITIES
 ANYCORE_EXPORT uint32_t ANYCORE_destroyAllEntities(ANYCORE* anycore) {
-    if (!anycore) { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
 
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
     ANYCORE_TransformManager* restrict ttm = &anycore->transformManager;
@@ -743,7 +747,7 @@ ANYCORE_EXPORT uint32_t ANYCORE_destroyAllEntities(ANYCORE* anycore) {
 
 #if ANYCORE_ENABLE_LOCK_ALL_ENTITIES
 ANYCORE_EXPORT uint32_t ANYCORE_lockAllEntities(ANYCORE* anycore) {
-    if (!anycore) { return 0; }
+    if (anycore == NULL) { return 0; }
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
     uint32_t totallocked = 0;
 
@@ -767,7 +771,7 @@ ANYCORE_EXPORT uint32_t ANYCORE_lockAllEntities(ANYCORE* anycore) {
 
 #if ANYCORE_ENABLE_UNLOCK_ALL_ENTITIES
 ANYCORE_EXPORT uint32_t ANYCORE_unlockAllEntities(ANYCORE* anycore) {
-    if (!anycore) { return 0; }
+    if (anycore == NULL) { return 0; }
     ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
     uint32_t totalunlocked = 0;
 
@@ -780,7 +784,6 @@ ANYCORE_EXPORT uint32_t ANYCORE_unlockAllEntities(ANYCORE* anycore) {
             if (tounlock == 0) { goto skip; }
 
             sc->lockFlags[w] &= ~tounlock;
-            
             totalunlocked += __builtin_popcount(tounlock);
 
             skip:
@@ -792,12 +795,14 @@ ANYCORE_EXPORT uint32_t ANYCORE_unlockAllEntities(ANYCORE* anycore) {
 
 #if ANYCORE_ENABLE_GET_ACTIVE_CHUNK_COUNT
 ANYCORE_EXPORT uint32_t ANYCORE_getActiveChunkCount(ANYCORE* anycore, uint32_t index) {
+    if (anycore == NULL) { return 0; }
     return CHUNKSIZE - anycore->sceneManager.fssize[index];
 }
 #endif
 
 #if ANYCORE_ENABLE_GET_LAST_CHUNK_VALID_ENTITY_COUNT
 ANYCORE_EXPORT uint32_t ANYCORE_getLastChunkValidEntityCount(ANYCORE* anycore) {
+    if (anycore == NULL) { return 0; }
     ANYCORE_SceneManager* sm = &anycore->sceneManager;
     return CHUNKSIZE - sm->fssize[sm->chunkcount - 1];
 }

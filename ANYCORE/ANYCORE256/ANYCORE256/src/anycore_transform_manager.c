@@ -379,9 +379,13 @@
             TC3DTYPE* tc = ttm->transformChunks[page];
             tc[slot].posx += transforms[i].posx;
             tc[slot].posy += transforms[i].posy;
+            tc[slot].posz += transforms[i].posz;
+            tc[slot].rotx += transforms[i].rotx;
+            tc[slot].roty += transforms[i].roty;
             tc[slot].rotz += transforms[i].rotz;
             tc[slot].scax += transforms[i].scax;
             tc[slot].scay += transforms[i].scay;
+            tc[slot].scaz += transforms[i].scaz;
 
             markDirty(ttm, dc, dcsflags, page, slot, wordindx, mask);
             skip:

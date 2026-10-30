@@ -33,7 +33,7 @@ ANYCORE_EXPORT bool ANYCORE_isEntityLocked(ANYCORE* anycore, const EntityID enti
 #endif
 
 static inline ANYCORE_RESULT ANYCORE_initSceneManager(ANYCORE* anycore, uint32_t chunkCountLimit, uint32_t modelChunkCountLimit, uint32_t stride) {
-    if (!anycore)              { return ANYCORE_ERR_INVALID_ANYCORE; }
+    if (anycore == NULL)       { return ANYCORE_ERR_INVALID_ANYCORE; }
     if (anycore->isinitalized) { return ANYCORE_ERR_ALREADY_INIT;    }
 
     ANYCORE_SceneManager* sm = &anycore->sceneManager;

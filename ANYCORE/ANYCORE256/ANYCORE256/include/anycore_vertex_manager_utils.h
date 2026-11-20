@@ -83,6 +83,15 @@ static inline ANYCORE_RESULT VertexManager_onGrow(ANYCORE* anycore, const uint32
     return ANYCORE_SUCCESS;
 }
 
+static inline void VertexManager_onRollback(ANYCORE* anycore, const uint32_t i) {
+    uint32_t* instances = anycore->vertexManager.instanceChunks[i].instances;
+
+    if (instances != NULL) {
+        ANYCORE_munmap(instances, CHUNKSIZE * sizeof(uint32_t));
+        anycore->vertexManager.instanceChunks[i].instances = NULL;
+    }
+}
+
 static inline void VertexManager_onFree(ANYCORE* anycore) {
     ANYCORE_VertexManager* vm = &anycore->vertexManager;
     ANYCORE_SceneManager* sm  = &anycore->sceneManager;

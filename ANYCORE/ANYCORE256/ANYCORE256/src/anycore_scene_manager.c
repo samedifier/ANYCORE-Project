@@ -63,9 +63,12 @@ ANYCORE_EXPORT bool ANYCORE_isEntityLocked(ANYCORE* anycore, const EntityID enti
 
     uint32_t page = entityID.slot >> CHUNKSHIFT;
     if (page >= sm->chunkcount) { return false; }
+
+    ANYCORE_SceneChunk* sc = &sm->sceneChunks[page];
     uint32_t slot = entityID.slot & CHUNKMASK;
-    
-    return (sm->sceneChunks[page].lockFlags[slot >> 5] & (1u << (slot & 31)));
+
+    if (sc->generations[slot] != entityID.generation) { return false; }    
+    return (sc->lockFlags[slot >> 5] & (1u << (slot & 31)));
 }
 #endif
 
@@ -98,9 +101,17 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
     for (uint32_t j = 0; j < CHUNKSIZE; ++j) { fs[j] = (uint16_t)j; gen[j] = 0; }
 
     ANYCORE_RESULT vmresult = VertexManager_onGrow(anycore, chunk);
-    ANYCORE_RESULT tmresult = TransformManager_onGrow(anycore, chunk);
+    if (vmresult != ANYCORE_SUCCESS) {
+        ANYCORE_munmap(gen, prec1);
+        ANYCORE_munmap(fs,  prec1);
+        ANYCORE_munmap(vf,  prec2);
+        ANYCORE_munmap(lf,  prec2);
+        return ANYCORE_ERR_ALLOC_FAILED;
+    }
 
-    if (tmresult != ANYCORE_SUCCESS || vmresult != ANYCORE_SUCCESS) {
+    ANYCORE_RESULT tmresult = TransformManager_onGrow(anycore, chunk);
+    if (tmresult != ANYCORE_SUCCESS) {
+        VertexManager_onRollback(anycore, chunk);
         ANYCORE_munmap(gen, prec1);
         ANYCORE_munmap(fs,  prec1);
         ANYCORE_munmap(vf,  prec2);
@@ -120,90 +131,6 @@ ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
 
     sm->usablefsc[sm->ufscsize++] = chunk;
     sm->chunkcount++;
-
-    return ANYCORE_SUCCESS;
-}
-#endif
-
-#if ANYCORE_ENABLE_FREE_LAST_CHUNK
-ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_freeLastChunk(ANYCORE* anycore) {
-    if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
-
-    ANYCORE_SceneManager*     sm  = &anycore->sceneManager;
-    ANYCORE_TransformManager* ttm = &anycore->transformManager;
-    ANYCORE_VertexManager*    vm  = &anycore->vertexManager;
-
-    if (sm->chunkcount == 0) { return ANYCORE_ERR_NO_CHUNK; }
-
-    const uint32_t last = sm->chunkcount - 1;
-    const uint32_t activeCount = CHUNKSIZE - sm->fssize[last];
-
-    sm->dsize -= activeCount;
-
-    if (sm->isusable[last]) {
-        for (uint32_t i = 0; i < sm->ufscsize; ++i) {
-            if (sm->usablefsc[i] == last) {
-                sm->usablefsc[i] = sm->usablefsc[sm->ufscsize - 1];
-                sm->ufscsize--;
-                break;
-            }
-        }
-        sm->isusable[last] = 0;
-    }
-
-    const uint32_t prec1 = CHUNKSIZE * sizeof(PRESICION);
-    const uint32_t prec2 = CHUNKSIZE * sizeof(uint16_t);
-    const uint32_t prec3 = 0x800 * sizeof(uint32_t);
-
-    ANYCORE_SceneChunk* sc = &sm->sceneChunks[last];
-    ANYCORE_DirtyChunk* dc = &ttm->dirtyChunks[last];
-
-#if SPACE == SPACE_2D
-    #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_Transform2Df* tc = ttm->transformChunks[last];
-    #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_Transform2Dd* tc = ttm->transformChunks[last];
-    #endif
-#elif SPACE == SPACE_3D
-    #if PRESICION_ == PRESICION_FLOAT
-        ANYCORE_Transform3Df* tc = ttm->transformChunks[last];
-    #elif PRESICION_ == PRESICION_DOUBLE
-        ANYCORE_Transform3Dd* tc = ttm->transformChunks[last];
-    #endif
-#endif
-
-    ANYCORE_munmap(sc->generations, prec2);
-    ANYCORE_munmap(sc->freeSlots,   prec2);
-    ANYCORE_munmap(sc->validFlags,  prec3);
-    ANYCORE_munmap(sc->lockFlags,   prec3);
-
-#if SPACE == SPACE_2D
-    ANYCORE_munmap(tc, prec1 * 5);
-#elif SPACE == SPACE_3D
-    ANYCORE_munmap(tc, prec1 * 9);
-#endif
-
-    ANYCORE_munmap(dc->dirties,     CHUNKSIZE * sizeof(uint32_t));
-    ANYCORE_munmap(dc->dirtyList,   CHUNKSIZE * sizeof(uint16_t));
-    ANYCORE_munmap(dc->createFlags, prec3);
-
-    ANYCORE_munmap(vm->instanceChunks[last].instances, CHUNKSIZE * sizeof(uint32_t));
-
-    sc->generations = NULL;
-    sc->freeSlots   = NULL;
-    sc->validFlags  = NULL;
-    sc->lockFlags   = NULL;
-
-    ttm->transformChunks[last] = NULL;
-
-    dc->dirties     = NULL;
-    dc->dirtyList   = NULL;
-    dc->createFlags = NULL;
-
-    vm->instanceChunks[last].instances = NULL;
-
-    sm->fssize[last] = 0;
-    sm->chunkcount--;
 
     return ANYCORE_SUCCESS;
 }

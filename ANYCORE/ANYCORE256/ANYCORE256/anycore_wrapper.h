@@ -126,17 +126,10 @@ typedef struct {
     /* Returns the number of active chunks. */
     uint32_t       (*getActiveChunkCount)    (ANYCORE* anycore, uint32_t);
 #endif
-#if ANYCORE_ENABLE_GET_LAST_CHUNK_VALID_ENTITY_COUNT
-    /* Returns the number of valid entities in the last chunk. */
-    uint32_t       (*getLastChunkValidEntityCount)(ANYCORE* anycore);
-#endif
-#if ANYCORE_ENABLE_FREE_LAST_CHUNK
-    /* Frees the last chunk. */
-    ANYCORE_RESULT (*freeLastChunk)          (ANYCORE* anycore);
-#endif
+
 #if ANYCORE_ENABLE_ALLOC_NEW_CHUNK
     /* Allocates a new chunk. */
-    ANYCORE_RESULT (*allocNewChunk)          (ANYCORE* anycore);
+    ANYCORE_RESULT (*allocNewChunk) (ANYCORE* anycore);
 #endif
 
 #if ANYCORE_ENABLE_CREATE_ENTITY_BULK
@@ -483,9 +476,6 @@ static inline bool ANYCORE_Wrapper_init(ANYCORE_Wrapper* w, void* libHandle) {
 #endif
 #if ANYCORE_ENABLE_GET_LAST_CHUNK_VALID_ENTITY_COUNT
     result &= ANYCORE_DLSYM(libHandle, "ANYCORE_getLastChunkValidEntityCount", w->getLastChunkValidEntityCount);
-#endif
-#if ANYCORE_ENABLE_FREE_LAST_CHUNK
-    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_freeLastChunk", w->freeLastChunk);
 #endif
 #if ANYCORE_ENABLE_ALLOC_NEW_CHUNK
     result &= ANYCORE_DLSYM(libHandle, "ANYCORE_allocNewChunk", w->allocNewChunk);

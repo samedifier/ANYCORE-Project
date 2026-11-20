@@ -161,7 +161,6 @@ typedef enum {
     ANYCORE_ERR_ALLOC_FAILED,
     ANYCORE_ERR_FREE_SLOT_NOT_FOUND,
     ANYCORE_ERR_CHUNK_LIMIT,
-    ANYCORE_ERR_NO_CHUNK,
     ANYCORE_ERR_ENTITY_DEAD,
     ANYCORE_ERR_ENTITY_LOCKED,
     ANYCORE_ERR_INVALID_MODEL_ID,
@@ -186,10 +185,10 @@ typedef struct {
     bool running;
     pthread_t thread;
 
-    void (*start)(uint32_t);
-    void (*loop)();
-    void (*injectStream)(ANYCORE_Stream*);
-    void (*clean)();
+    void (*start)        (uint32_t);
+    void (*loop)         (void);
+    void (*injectStream) (ANYCORE_Stream*);
+    void (*clean)        (void);
 
     pthread_mutex_t runMutex;
     pthread_cond_t  runCond;

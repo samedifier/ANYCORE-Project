@@ -40,6 +40,10 @@
 #define ANYCORE_ENABLE_IS_ENTITY_ALIVE                   ON
 #define ANYCORE_ENABLE_IS_ENTITY_LOCKED                  ON
 
+#define ANYCORE_ENABLE_NEXT_ENTITY_ID_BULK               ON
+#define ANYCORE_ENABLE_IS_ENTITY_ALIVE_BULK              ON
+#define ANYCORE_ENABLE_IS_ENTITY_LOCKED_BULK             ON
+
 #define ANYCORE_ENABLE_CREATE_ENTITY                     ON
 #define ANYCORE_ENABLE_RESTORE_ENTITY                    ON
 #define ANYCORE_ENABLE_DESTROY_ENTITY                    ON

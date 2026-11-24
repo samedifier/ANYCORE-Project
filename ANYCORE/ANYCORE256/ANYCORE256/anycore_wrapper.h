@@ -91,7 +91,6 @@ typedef struct {
     /* Returns the next EntityID without modifying scene state. */
     ANYCORE_RESULT (*nextEntityID) (ANYCORE* anycore, EntityID* nextEntityID);
 #endif
-
 #if ANYCORE_ENABLE_IS_ENTITY_ALIVE
     /* Checks whether an entity is currently alive. */
     bool           (*isEntityAlive)          (ANYCORE* anycore, const EntityID);
@@ -99,6 +98,18 @@ typedef struct {
 #if ANYCORE_ENABLE_IS_ENTITY_LOCKED
     /* Checks whether an entity is currently locked. */
     bool           (*isEntityLocked)         (ANYCORE* anycore, const EntityID);
+#endif
+#if ANYCORE_ENABLE_NEXT_ENTITY_ID_BULK
+    /* Retrieves multiple upcoming EntityIDs without modifying scene state. */
+    uint32_t (*nextEntityIDBulk) (ANYCORE* anycore, EntityID* nextEntityIDs, uint32_t count);
+#endif
+#if ANYCORE_ENABLE_IS_ENTITY_ALIVE_BULK
+    /* Checks whether multiple entities are currently alive. */
+    uint32_t (*isEntityAliveBulk) (ANYCORE* anycore, const EntityID* entityIDs, bool* results, uint32_t count);
+#endif
+#if ANYCORE_ENABLE_IS_ENTITY_LOCKED_BULK
+    /* Checks whether multiple entities are currently locked. */
+    uint32_t (*isEntityLockedBulk) (ANYCORE* anycore, const EntityID* entityIDs, bool* results, uint32_t count);
 #endif
 
 #if ANYCORE_ENABLE_CREATE_ENTITY
@@ -394,8 +405,8 @@ static inline bool ANYCORE_load(ANYCORE_Instance* out, const char* path,
     out->libHandle = ANYCORE_DLOPEN(path);
     if (!out->libHandle) return false;
 
-    ANYCORE_RESULT (*init)(ANYCORE**, uint32_t, uint32_t, uint16_t, uint16_t, uint16_t, uint32_t) = NULL;
-    *(void**)(&init) = dlsym(out->libHandle, "initANYCORE");
+    ANYCORE_RESULT (*init) (ANYCORE**, uint32_t, uint32_t, uint16_t, uint16_t, uint16_t, uint32_t) = NULL;
+    *(void**) (&init) = dlsym(out->libHandle, "initANYCORE");
     if (!init) { ANYCORE_DLCLOSE(out->libHandle); return false; }
 
     ANYCORE_RESULT r = init(&out->core, chunkCountLimit, modelChunkCountLimit, startCapacity, loopCapacity, moduleCapacity, stride);
@@ -456,6 +467,16 @@ static inline bool ANYCORE_Wrapper_init(ANYCORE_Wrapper* w, void* libHandle) {
 #if ANYCORE_ENABLE_IS_ENTITY_LOCKED
     result &= ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityLocked", w->isEntityLocked);
 #endif
+#if ANYCORE_ENABLE_NEXT_ENTITY_ID_BULK
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_nextEntityIDBulk", w->nextEntityIDBulk);
+#endif
+#if ANYCORE_ENABLE_IS_ENTITY_ALIVE_BULK
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityAliveBulk", w->isEntityAliveBulk);
+#endif
+#if ANYCORE_ENABLE_IS_ENTITY_LOCKED_BULK
+    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_isEntityLockedBulk", w->isEntityLockedBulk);
+#endif
+
 #if ANYCORE_ENABLE_CREATE_ENTITY
     result &= ANYCORE_DLSYM(libHandle, "ANYCORE_createEntity", w->createEntity);
 #endif
@@ -473,9 +494,6 @@ static inline bool ANYCORE_Wrapper_init(ANYCORE_Wrapper* w, void* libHandle) {
 #endif
 #if ANYCORE_ENABLE_GET_ACTIVE_CHUNK_COUNT
     result &= ANYCORE_DLSYM(libHandle, "ANYCORE_getActiveChunkCount", w->getActiveChunkCount);
-#endif
-#if ANYCORE_ENABLE_GET_LAST_CHUNK_VALID_ENTITY_COUNT
-    result &= ANYCORE_DLSYM(libHandle, "ANYCORE_getLastChunkValidEntityCount", w->getLastChunkValidEntityCount);
 #endif
 #if ANYCORE_ENABLE_ALLOC_NEW_CHUNK
     result &= ANYCORE_DLSYM(libHandle, "ANYCORE_allocNewChunk", w->allocNewChunk);

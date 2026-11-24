@@ -72,6 +72,103 @@ ANYCORE_EXPORT bool ANYCORE_isEntityLocked(ANYCORE* anycore, const EntityID enti
 }
 #endif
 
+#if ANYCORE_ENABLE_NEXT_ENTITY_ID_BULK
+ANYCORE_EXPORT uint32_t ANYCORE_nextEntityIDBulk(ANYCORE* anycore, EntityID* nextEntityIDs, uint32_t count) {
+    if (anycore == NULL || nextEntityIDs == NULL || count == 0) { return 0; }
+
+    ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
+    ANYCORE_SceneChunk* restrict asc = sm->sceneChunks;
+
+    uint32_t outcount = 0;
+    for (uint32_t i = sm->ufscsize; i > 0 && outcount < count; i--) {
+        uint32_t chunk = sm->usablefsc[i - 1];
+        ANYCORE_SceneChunk* restrict sc = &asc[chunk];
+
+        uint32_t fssize = sm->fssize[chunk];
+
+        for (uint32_t j = fssize; j > 0 && outcount < count; j--) {
+            uint32_t slot = sc->freeSlots[j - 1];
+
+            nextEntityIDs[outcount++] = (EntityID) {
+                .slot = (chunk << CHUNKSHIFT) | slot,
+                .generation = sc->generations[slot] + 1
+            };
+        }
+    }
+
+    return outcount;
+}
+#endif
+
+#if ANYCORE_ENABLE_IS_ENTITY_ALIVE_BULK
+ANYCORE_EXPORT uint32_t ANYCORE_isEntityAliveBulk(ANYCORE* anycore, const EntityID* entityIDs, bool* results, uint32_t count) {
+    if (anycore == NULL || entityIDs == NULL || results == NULL) { return 0; }
+
+    ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
+    ANYCORE_SceneChunk* restrict asc = sm->sceneChunks;
+
+    uint32_t chunkcount = sm->chunkcount;
+
+    for (uint32_t i = 0; i < count; i++) {
+        const EntityID entityID = entityIDs[i];
+
+        const uint32_t chunk = entityID.slot >> CHUNKSHIFT;
+        const uint32_t slot = entityID.slot & CHUNKMASK;
+
+        if (chunk >= chunkcount) {
+            results[i] = false;
+            continue;
+        }
+
+        ANYCORE_SceneChunk* restrict sc = &asc[chunk];
+
+        const uint32_t wordindx = slot >> 5;
+        const uint32_t mask = 1u << (slot & 31);
+
+        results[i] = ((sc->validFlags[wordindx] & mask) && (sc->generations[slot] == entityID.generation));
+    }
+
+    return count;
+}
+#endif
+
+#if ANYCORE_ENABLE_IS_ENTITY_LOCKED_BULK
+ANYCORE_EXPORT uint32_t ANYCORE_isEntityLockedBulk(ANYCORE* anycore, const EntityID* entityIDs, bool* results, uint32_t count) {
+    if (anycore == NULL || entityIDs == NULL || results == NULL) { return 0; }
+
+    ANYCORE_SceneManager* restrict sm = &anycore->sceneManager;
+    ANYCORE_SceneChunk* restrict asc = sm->sceneChunks;
+
+    uint32_t chunkcount = sm->chunkcount;
+
+    for (uint32_t i = 0; i < count; i++) {
+        const EntityID entityID = entityIDs[i];
+
+        const uint32_t chunk = entityID.slot >> CHUNKSHIFT;
+        const uint32_t slot = entityID.slot & CHUNKMASK;
+
+        if (chunk >= chunkcount) {
+            results[i] = false;
+            continue;
+        }
+
+        ANYCORE_SceneChunk* restrict sc = &asc[chunk];
+
+        if (sc->generations[slot] != entityID.generation) {
+            results[i] = false;
+            continue;
+        }
+
+        const uint32_t wordindx = slot >> 5;
+        const uint32_t mask = 1u << (slot & 31);
+
+        results[i] = (sc->lockFlags[wordindx] & mask) != 0;
+    }
+
+    return count;
+}
+#endif
+
 #if ANYCORE_ENABLE_ALLOC_NEW_CHUNK
 ANYCORE_EXPORT ANYCORE_RESULT ANYCORE_allocNewChunk(ANYCORE* anycore) {
     if (anycore == NULL) { return ANYCORE_ERR_INVALID_ANYCORE; }
